@@ -4,6 +4,7 @@ import {
   CategoryCreateRequest,
   CategoryUpdateRequest,
 } from '@/domain/entities/Category';
+import { Filter } from '@/domain/entities/Filter';
 import { ApiResponse } from '@/domain/entities/ApiResponse';
 
 export class CategoryAdminRepository {
@@ -53,6 +54,16 @@ export class CategoryAdminRepository {
     return await adminApiClient.patch<ApiResponse<Category>>(
       `/admin/categories/${id}/deactivate`
     );
+  }
+
+  async getCategoryFilters(categoryId: number): Promise<ApiResponse<Filter[]>> {
+    const response = await adminApiClient.get<any>(`/admin/categories/${categoryId}/filters`);
+    // Transform response from {data: {filters: [...]}} to {data: [...]}
+    return {
+      success: true,
+      data: response.data?.filters || [],
+      message: response.message || 'Success',
+    };
   }
 }
 

@@ -20,7 +20,7 @@ export interface CategoryCreateRequest {
   name_ar?: string;
   description?: string;
   description_ar?: string;
-  icon_url?: string;
+  icon?: string;
   display_order?: number;
 }
 
@@ -29,6 +29,6 @@ export interface CategoryUpdateRequest {
   name_ar?: string;
   description?: string;
   description_ar?: string;
-  icon_url?: string;
+  icon?: string;
   display_order?: number;
 }

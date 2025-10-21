@@ -16,6 +16,8 @@ export interface TagCreateRequest {
   name: string;
   name_ar?: string;
   slug?: string;
+  type: string;
+  description?: string;
   icon?: string;
   display_order?: number;
 }
@@ -24,4 +26,8 @@ export interface TagUpdateRequest {
   name?: string;
   name_ar?: string;
   slug?: string;
+  type?: string;
+  description?: string;
+  icon?: string;
+  display_order?: number;
 }

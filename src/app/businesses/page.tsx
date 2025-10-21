@@ -14,6 +14,7 @@ import { tagAdminRepository } from '@/infrastructure/repositories/TagAdminReposi
 import { Business } from '@/domain/entities/Business';
 import { Category } from '@/domain/entities/Category';
 import { Tag } from '@/domain/entities/Tag';
+import { Filter } from '@/domain/entities/Filter';
 import { toastService } from '@/application/services/toastService';
 import {
   FiCheck,
@@ -64,16 +65,24 @@ export default function BusinessesPage() {
     contact_numbers: '',
     address: '',
     address_ar: '',
-    logo_url: '',
+    logo: '',
     tag_ids: [] as number[],
+    filter_values: {} as Record<string, string>,
   });
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [categoryFilters, setCategoryFilters] = useState<Filter[]>([]);
+  const [loadingFilters, setLoadingFilters] = useState(false);
 
   const bulkSelection = useBulkSelection({
     items: businesses,
     getItemId: (business) => business.id,
   });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort]);
 
   useEffect(() => {
     loadBusinesses();
@@ -105,6 +114,34 @@ export default function BusinessesPage() {
       setTags(response.data || []);
     } catch (err) {
       console.error('Failed to load tags:', err);
+    }
+  };
+
+  const loadCategoryFilters = async (categoryId: number) => {
+    try {
+      setLoadingFilters(true);
+      const response = await categoryAdminRepository.getCategoryFilters(categoryId);
+      const filters = response.data || [];
+      setCategoryFilters(filters);
+
+      // Initialize default filter values
+      const defaultFilterValues: Record<string, string> = {};
+      filters.forEach((filter) => {
+        const defaultOption = filter.options?.find((opt) => opt.is_default);
+        if (defaultOption) {
+          defaultFilterValues[filter.slug] = defaultOption.value;
+        }
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        filter_values: { ...defaultFilterValues, ...prev.filter_values }
+      }));
+    } catch (err) {
+      console.error('Failed to load category filters:', err);
+      toastService.error('Failed to load filters for this category');
+    } finally {
+      setLoadingFilters(false);
     }
   };
 
@@ -145,10 +182,14 @@ export default function BusinessesPage() {
       contact_numbers: '',
       address: '',
       address_ar: '',
-      logo_url: '',
+      logo: '',
       tag_ids: [],
+      filter_values: {},
     });
+    setCategoryFilters([]);
     setShowModal(true);
+    // Load filters for default category (1)
+    loadCategoryFilters(1);
   };
 
   const handleEdit = (business: Business) => {
@@ -166,21 +207,58 @@ export default function BusinessesPage() {
       contact_numbers: business.contact_numbers || '',
       address: business.address || '',
       address_ar: business.address_ar || '',
-      logo_url: business.logo_url || '',
+      logo: business.logo || '',
       tag_ids: business.tags?.map(tag => tag.id) || [],
+      filter_values: business.attributes || {},
     });
     setShowModal(true);
+    // Load filters for this business's category
+    loadCategoryFilters(business.category_id);
+  };
+
+  // Helper function to clean form data before submission
+  const cleanFormData = (data: any) => {
+    const cleaned: any = { ...data };
+
+    // Helper to check if string is empty or just HTML whitespace from ReactQuill
+    const isEmptyString = (value: string) => {
+      if (!value) return true;
+      // Remove HTML tags and check if there's any actual content
+      const textOnly = value.replace(/<[^>]*>/g, '').trim();
+      return textOnly === '';
+    };
+
+    // Remove empty optional fields to avoid validation errors
+    Object.keys(cleaned).forEach(key => {
+      const value = cleaned[key];
+      if (typeof value === 'string' && isEmptyString(value)) {
+        delete cleaned[key];
+      }
+    });
+
+    // Ensure required fields are present
+    if (!cleaned.user_id) cleaned.user_id = 1;
+    if (!cleaned.category_id) cleaned.category_id = 1;
+    if (!cleaned.name) cleaned.name = '';
+    if (!cleaned.slug && !editingBusiness) cleaned.slug = '';
+
+    return cleaned;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const cleanedData = cleanFormData(formData);
+
       if (editingBusiness) {
-        await businessAdminRepository.update(editingBusiness.id, formData);
+        await businessAdminRepository.update(editingBusiness.id, cleanedData);
         toastService.success('Business updated successfully!');
       } else {
-        await businessAdminRepository.create(formData);
+        await businessAdminRepository.create(cleanedData);
         toastService.success('Business created successfully!');
+        // Reset to page 1 and sort by newest to show the new business
+        setCurrentPage(1);
+        setFilters(prev => ({ ...prev, sort: 'newest', status: '' }));
       }
       setShowModal(false);
       loadBusinesses();
@@ -437,6 +515,14 @@ export default function BusinessesPage() {
                               Unverify
                             </button>
                           )}
+                          {business.status === 'pending' && (
+                            <button
+                              onClick={() => handleAction('activate', business.id, business.name)}
+                              className="btn btn-success btn-sm"
+                            >
+                              <FiPlay /> Activate
+                            </button>
+                          )}
                           {!business.is_featured && business.status === 'active' && (
                             <button
                               onClick={() => handleAction('feature', business.id, business.name)}
@@ -550,8 +636,8 @@ export default function BusinessesPage() {
 
                 <div className="form-group">
                   <IconPicker
-                    value={formData.logo_url}
-                    onChange={(value) => setFormData({ ...formData, logo_url: value })}
+                    value={formData.logo}
+                    onChange={(value) => setFormData({ ...formData, logo: value })}
                     label="Business Logo"
                   />
                 </div>
@@ -573,7 +659,13 @@ export default function BusinessesPage() {
                   <label>Category *</label>
                   <select
                     value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const newCategoryId = parseInt(e.target.value);
+                      setFormData({ ...formData, category_id: newCategoryId });
+                      if (newCategoryId) {
+                        loadCategoryFilters(newCategoryId);
+                      }
+                    }}
                     required
                   >
                     <option value="">Select a category...</option>
@@ -610,6 +702,42 @@ export default function BusinessesPage() {
                     {formData.tag_ids.length} {formData.tag_ids.length === 1 ? 'tag' : 'tags'} selected
                   </div>
                 </div>
+
+                {categoryFilters.length > 0 && (
+                  <div className="form-group">
+                    <label>Filters</label>
+                    {loadingFilters ? (
+                      <p style={{ color: '#666', fontSize: '14px' }}>Loading filters...</p>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                        {categoryFilters.map((filter) => (
+                          <div key={filter.slug}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 500 }}>
+                              {filter.label}
+                            </label>
+                            <select
+                              value={formData.filter_values[filter.slug] || ''}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                filter_values: {
+                                  ...formData.filter_values,
+                                  [filter.slug]: e.target.value
+                                }
+                              })}
+                              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                            >
+                              {filter.options?.map((option) => (
+                                <option key={option.id} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label>About</label>

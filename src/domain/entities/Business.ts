@@ -9,7 +9,7 @@ export interface Business {
   name_ar: string;
   about?: string;
   about_ar?: string;
-  logo_url?: string;
+  logo?: string;
   contact_numbers?: string;
   email?: string;
   website?: string;
@@ -38,7 +38,7 @@ export interface BusinessCreateRequest {
   name_ar?: string;
   about?: string;
   about_ar?: string;
-  logo_url?: string;
+  logo?: string;
   contact_numbers?: string;
   email?: string;
   website?: string;
@@ -47,6 +47,7 @@ export interface BusinessCreateRequest {
   latitude?: number;
   longitude?: number;
   attributes?: Record<string, string>;
+  filter_values?: Record<string, string>; // e.g., {"price-range": "premium", "verified": "true"}
   tag_ids?: number[];
 }
 
@@ -56,7 +57,7 @@ export interface BusinessUpdateRequest {
   name_ar?: string;
   about?: string;
   about_ar?: string;
-  logo_url?: string;
+  logo?: string;
   contact_numbers?: string;
   email?: string;
   website?: string;
@@ -65,6 +66,7 @@ export interface BusinessUpdateRequest {
   latitude?: number;
   longitude?: number;
   attributes?: Record<string, string>;
+  filter_values?: Record<string, string>; // e.g., {"price-range": "premium", "verified": "true"}
   tag_ids?: number[];
 }
 

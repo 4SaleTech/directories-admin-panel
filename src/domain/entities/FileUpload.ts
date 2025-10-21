@@ -15,7 +15,10 @@ export interface BulkFileUploadRequest {
 
 export interface PresignedUrlResponse {
   uploadUrl: string;
-  url: string;
+  url?: string; // Deprecated - use publicUrls.url instead
+  publicUrls?: {
+    url: string;
+  };
   method: string;
   headers: Record<string, string>;
   uploadBucket: string;

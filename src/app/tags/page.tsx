@@ -29,6 +29,7 @@ export default function TagsPage() {
   const [formData, setFormData] = useState({
     name: '',
     name_ar: '',
+    type: 'amenity',
     icon: '',
     display_order: 0,
   });
@@ -162,6 +163,7 @@ export default function TagsPage() {
     setFormData({
       name: '',
       name_ar: '',
+      type: 'amenity',
       icon: '',
       display_order: 0,
     });
@@ -173,6 +175,7 @@ export default function TagsPage() {
     setFormData({
       name: tag.name,
       name_ar: tag.name_ar || '',
+      type: tag.type || 'amenity',
       icon: tag.icon || '',
       display_order: tag.display_order || 0,
     });
@@ -391,6 +394,20 @@ export default function TagsPage() {
                     value={formData.name_ar}
                     onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label>Type *</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    required
+                  >
+                    <option value="amenity">Amenity (parking, wifi, wheelchair-access)</option>
+                    <option value="service">Service (delivery, online-booking, 24-7)</option>
+                    <option value="feature">Feature (luxury, family-friendly, pet-friendly)</option>
+                    <option value="price-range">Price Range (budget, mid-range, premium)</option>
+                  </select>
                 </div>
 
                 {editingTag && (

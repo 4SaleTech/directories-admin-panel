@@ -32,7 +32,7 @@ export default function CategoriesPage() {
     name_ar: '',
     description: '',
     description_ar: '',
-    icon_url: '',
+    icon: '',
     display_order: 0,
   });
 
@@ -86,7 +86,7 @@ export default function CategoriesPage() {
       name_ar: '',
       description: '',
       description_ar: '',
-      icon_url: '',
+      icon: '',
       display_order: 0,
     });
     setShowModal(true);
@@ -99,7 +99,7 @@ export default function CategoriesPage() {
       name_ar: category.name_ar || '',
       description: category.description || '',
       description_ar: category.description_ar || '',
-      icon_url: category.icon_url || '',
+      icon: category.icon || category.icon_url || '',
       display_order: category.display_order,
     });
     setShowModal(true);
@@ -409,8 +409,8 @@ export default function CategoriesPage() {
 
                 <div className="form-group">
                   <IconPicker
-                    value={formData.icon_url}
-                    onChange={(value) => setFormData({ ...formData, icon_url: value })}
+                    value={formData.icon}
+                    onChange={(value) => setFormData({ ...formData, icon: value })}
                     label="Category Icon"
                   />
                 </div>

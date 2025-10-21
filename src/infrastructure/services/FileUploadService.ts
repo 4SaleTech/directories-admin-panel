@@ -88,27 +88,45 @@ export class FileUploadService {
       mime: file.type,
       size: file.size,
       fileExtension: this.getFileExtension(file.name),
+      type: 'user-profile',
     }));
 
     try {
       if (isSingleFile) {
         // Single file upload
+        console.log('📤 REQUEST: Sending single file upload request');
+        console.log('🔗 Endpoint:', PRESIGNED_URL_ENDPOINT);
+        console.log('📦 Payload:', JSON.stringify(fileRequests[0], null, 2));
+
         const response = await axios.post<PresignedUrlResponse>(PRESIGNED_URL_ENDPOINT, fileRequests[0], {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${API_TOKEN}`,
           },
         });
+
+        console.log('📥 RESPONSE: Received presigned URL response');
+        console.log('📦 Response data:', JSON.stringify(response.data, null, 2));
+
         return [response.data];
       } else {
         // Bulk file upload
         const payload: BulkFileUploadRequest = { files: fileRequests };
+
+        console.log('📤 REQUEST: Sending bulk file upload request');
+        console.log('🔗 Endpoint:', PRESIGNED_URL_ENDPOINT);
+        console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+
         const response = await axios.post<BulkPresignedUrlResponse>(PRESIGNED_URL_ENDPOINT, payload, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${API_TOKEN}`,
           },
         });
+
+        console.log('📥 RESPONSE: Received presigned URL response');
+        console.log('📦 Response data:', JSON.stringify(response.data, null, 2));
+
         return response.data.files;
       }
     } catch (error: any) {
@@ -213,9 +231,18 @@ export class FileUploadService {
           progress.progress = 100;
           updateProgress();
 
+          // Extract the final URL from the API response (nested in publicUrls.url)
+          const finalUrl = (presignedData as any).publicUrls?.url || presignedData.url;
+
+          // Log the uploaded image URL
+          console.log('✅ Image uploaded successfully!');
+          console.log('📸 File:', file.name);
+          console.log('🔗 URL:', finalUrl);
+          console.log('---');
+
           // Return uploaded file metadata with the URL from API response
           return {
-            url: presignedData.url,
+            url: finalUrl,
             fileName: file.name,
             size: file.size,
             mimeType: file.type,
