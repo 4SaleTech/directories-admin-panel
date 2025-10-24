@@ -60,9 +60,12 @@ export default function BusinessesPage() {
     name_ar: '',
     about: '',
     about_ar: '',
-    email: '',
-    website: '',
-    contact_numbers: '',
+    contact_info: {
+      email: '',
+      website: '',
+      contact_numbers: '',
+      whatsapp: '',
+    },
     address: '',
     address_ar: '',
     logo: '',
@@ -177,9 +180,12 @@ export default function BusinessesPage() {
       name_ar: '',
       about: '',
       about_ar: '',
-      email: '',
-      website: '',
-      contact_numbers: '',
+      contact_info: {
+        email: '',
+        website: '',
+        contact_numbers: '',
+        whatsapp: '',
+      },
       address: '',
       address_ar: '',
       logo: '',
@@ -202,9 +208,12 @@ export default function BusinessesPage() {
       name_ar: business.name_ar || '',
       about: business.about || '',
       about_ar: business.about_ar || '',
-      email: business.email || '',
-      website: business.website || '',
-      contact_numbers: business.contact_numbers || '',
+      contact_info: {
+        email: business.contact_info?.email || '',
+        website: business.contact_info?.website || '',
+        contact_numbers: business.contact_info?.contact_numbers?.join(', ') || '',
+        whatsapp: business.contact_info?.whatsapp?.join(', ') || '',
+      },
       address: business.address || '',
       address_ar: business.address_ar || '',
       logo: business.logo || '',
@@ -227,6 +236,21 @@ export default function BusinessesPage() {
       const textOnly = value.replace(/<[^>]*>/g, '').trim();
       return textOnly === '';
     };
+
+    // Convert contact_info from string format to array format
+    if (cleaned.contact_info) {
+      const contactInfo = cleaned.contact_info;
+      cleaned.contact_info = {
+        email: contactInfo.email || '',
+        website: contactInfo.website || '',
+        contact_numbers: contactInfo.contact_numbers
+          ? contactInfo.contact_numbers.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+          : [],
+        whatsapp: contactInfo.whatsapp
+          ? contactInfo.whatsapp.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+          : [],
+      };
+    }
 
     // Remove empty optional fields to avoid validation errors
     Object.keys(cleaned).forEach(key => {
@@ -779,8 +803,8 @@ export default function BusinessesPage() {
                   <label>Email</label>
                   <input
                     type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    value={formData.contact_info.email}
+                    onChange={(e) => setFormData({ ...formData, contact_info: { ...formData.contact_info, email: e.target.value } })}
                   />
                 </div>
 
@@ -788,8 +812,8 @@ export default function BusinessesPage() {
                   <label>Website</label>
                   <input
                     type="url"
-                    value={formData.website}
-                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    value={formData.contact_info.website}
+                    onChange={(e) => setFormData({ ...formData, contact_info: { ...formData.contact_info, website: e.target.value } })}
                   />
                 </div>
 
@@ -797,10 +821,26 @@ export default function BusinessesPage() {
                   <label>Contact Numbers</label>
                   <input
                     type="text"
-                    value={formData.contact_numbers}
-                    onChange={(e) => setFormData({ ...formData, contact_numbers: e.target.value })}
+                    value={formData.contact_info.contact_numbers}
+                    onChange={(e) => setFormData({ ...formData, contact_info: { ...formData.contact_info, contact_numbers: e.target.value } })}
                     placeholder="e.g., +965 1234 5678, +965 8765 4321"
                   />
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Separate multiple numbers with commas
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label>WhatsApp Numbers</label>
+                  <input
+                    type="text"
+                    value={formData.contact_info.whatsapp}
+                    onChange={(e) => setFormData({ ...formData, contact_info: { ...formData.contact_info, whatsapp: e.target.value } })}
+                    placeholder="e.g., +965 1234 5678, +965 8765 4321"
+                  />
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Separate multiple numbers with commas
+                  </small>
                 </div>
 
                 <div className="form-group">

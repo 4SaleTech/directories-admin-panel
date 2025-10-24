@@ -10,9 +10,12 @@ export interface Business {
   about?: string;
   about_ar?: string;
   logo?: string;
-  contact_numbers?: string;
-  email?: string;
-  website?: string;
+  contact_info?: {
+    contact_numbers: string[];
+    whatsapp: string[];
+    email: string;
+    website: string;
+  };
   address?: string;
   address_ar?: string;
   latitude?: number;
@@ -39,9 +42,12 @@ export interface BusinessCreateRequest {
   about?: string;
   about_ar?: string;
   logo?: string;
-  contact_numbers?: string;
-  email?: string;
-  website?: string;
+  contact_info?: {
+    contact_numbers: string[];
+    whatsapp: string[];
+    email: string;
+    website: string;
+  };
   address?: string;
   address_ar?: string;
   latitude?: number;
@@ -58,9 +64,12 @@ export interface BusinessUpdateRequest {
   about?: string;
   about_ar?: string;
   logo?: string;
-  contact_numbers?: string;
-  email?: string;
-  website?: string;
+  contact_info?: {
+    contact_numbers: string[];
+    whatsapp: string[];
+    email: string;
+    website: string;
+  };
   address?: string;
   address_ar?: string;
   latitude?: number;
