@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import AdminLayout from '@/presentation/components/AdminLayout/AdminLayout';
 import LoadingSpinner from '@/presentation/components/LoadingSpinner/LoadingSpinner';
@@ -30,7 +31,8 @@ import {
   FiAlertCircle,
   FiPause,
   FiPlay,
-  FiPlus
+  FiPlus,
+  FiEye
 } from 'react-icons/fi';
 import 'react-quill/dist/quill.snow.css';
 import styles from './businesses.module.scss';
@@ -39,6 +41,7 @@ import styles from './businesses.module.scss';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 export default function BusinessesPage() {
+  const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -599,6 +602,12 @@ export default function BusinessesPage() {
                       <td>{business.rating ? business.rating.toFixed(1) : 'N/A'}</td>
                       <td>
                         <div className={styles.actions}>
+                          <button
+                            onClick={() => router.push(`/businesses/${business.id}`)}
+                            className="btn btn-info btn-sm"
+                          >
+                            <FiEye /> Details
+                          </button>
                           <button
                             onClick={() => handleEdit(business)}
                             className="btn btn-primary btn-sm"
