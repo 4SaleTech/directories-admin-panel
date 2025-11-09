@@ -55,7 +55,9 @@ export default function BusinessesPage() {
     is_verified: '',
     is_featured: '',
     sort: 'newest',
+    category_id: '',
   });
+  const [dynamicFilters, setDynamicFilters] = useState<Record<string, string | string[]>>({});
   const [showModal, setShowModal] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [formData, setFormData] = useState({
@@ -108,15 +110,25 @@ export default function BusinessesPage() {
     getItemId: (business) => business.id,
   });
 
+  // Load category filters when category changes
+  useEffect(() => {
+    if (filters.category_id) {
+      loadCategoryFiltersForBusinessList(parseInt(filters.category_id));
+    } else {
+      setCategoryFilters([]);
+      setDynamicFilters({});
+    }
+  }, [filters.category_id]);
+
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort]);
+  }, [filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort, filters.category_id, dynamicFilters]);
 
   useEffect(() => {
     loadBusinesses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort]);
+  }, [currentPage, filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort, filters.category_id, dynamicFilters]);
 
   useEffect(() => {
     bulkSelection.clearSelection();
@@ -219,6 +231,23 @@ export default function BusinessesPage() {
     }
   };
 
+  const loadCategoryFiltersForBusinessList = async (categoryId: number) => {
+    try {
+      setLoadingFilters(true);
+      const response = await categoryAdminRepository.getCategoryFilters(categoryId);
+      const filters = response.data || [];
+      setCategoryFilters(filters);
+
+      // Reset dynamic filters when category changes
+      setDynamicFilters({});
+    } catch (err) {
+      console.error('Failed to load category filters:', err);
+      toastService.error('Failed to load filters for this category');
+    } finally {
+      setLoadingFilters(false);
+    }
+  };
+
   const loadBusinesses = async () => {
     try {
       setIsLoading(true);
@@ -228,6 +257,12 @@ export default function BusinessesPage() {
       if (filters.is_verified) params.is_verified = filters.is_verified === 'true';
       if (filters.is_featured) params.is_featured = filters.is_featured === 'true';
       if (filters.sort) params.sort = filters.sort;
+      if (filters.category_id) params.category_id = parseInt(filters.category_id);
+
+      // Add dynamic filters if any are set
+      if (Object.keys(dynamicFilters).length > 0) {
+        params.filters = dynamicFilters;
+      }
 
       const response = await businessAdminRepository.getAll(params);
       setBusinesses(response.data || []);
@@ -474,6 +509,20 @@ export default function BusinessesPage() {
 
           <div className="form-group">
             <select
+              value={filters.category_id}
+              onChange={(e) => setFilters({ ...filters, category_id: e.target.value })}
+            >
+              <option value="">All Categories</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             >
@@ -518,6 +567,73 @@ export default function BusinessesPage() {
               <option value="views">Most Popular</option>
             </select>
           </div>
+
+          {/* Dynamic category filters */}
+          {categoryFilters.length > 0 && (
+            <>
+              {categoryFilters.map((filter) => {
+                const hasSubtypeMultiSelect = filter.options?.some(
+                  (opt) => opt.label.includes('multi') || filter.type === 'checkbox'
+                );
+
+                if (hasSubtypeMultiSelect) {
+                  // Multi-select filter: render as checkboxes
+                  const selectedValues = (dynamicFilters[filter.slug] as string[]) || [];
+
+                  return (
+                    <div key={filter.slug} className="form-group" style={{ minWidth: '200px' }}>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                        {filter.label}
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {filter.options?.map((option) => (
+                          <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedValues.includes(option.value)}
+                              onChange={(e) => {
+                                const newValues = e.target.checked
+                                  ? [...selectedValues, option.value]
+                                  : selectedValues.filter((v) => v !== option.value);
+
+                                setDynamicFilters((prev) => ({
+                                  ...prev,
+                                  [filter.slug]: newValues.length > 0 ? newValues : undefined,
+                                }));
+                              }}
+                            />
+                            <span>{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                } else {
+                  // Single-select filter: render as dropdown
+                  return (
+                    <div key={filter.slug} className="form-group">
+                      <select
+                        value={(dynamicFilters[filter.slug] as string) || ''}
+                        onChange={(e) => {
+                          setDynamicFilters((prev) => ({
+                            ...prev,
+                            [filter.slug]: e.target.value || undefined,
+                          }));
+                        }}
+                      >
+                        <option value="">{filter.label} (All)</option>
+                        {filter.options?.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                }
+              })}
+            </>
+          )}
         </div>
 
         <BulkActionsToolbar

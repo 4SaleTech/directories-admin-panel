@@ -178,3 +178,83 @@
     border: 2px solid #e0e0e0;
   }
 }
+
+.uploadModeTabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.modeTab {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+
+  svg {
+    font-size: 16px;
+  }
+
+  &:hover {
+    border-color: #007bff;
+    color: #007bff;
+  }
+
+  &.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+  }
+}
+
+.filePreview {
+  margin-top: 12px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+
+  img {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+  }
+}
+
+.progressBar {
+  height: 30px;
+  background: #e9ecef;
+  border-radius: 15px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+  transition: width 0.3s ease;
+}

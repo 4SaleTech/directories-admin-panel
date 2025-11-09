@@ -114,4 +114,7 @@ export interface BusinessListParams {
   category_id?: number;
   search?: string;
   sort?: string;
+  // Dynamic filters: supports both single-value and multi-select filters
+  // Multi-select filters will be converted to comma-separated strings for the API
+  filters?: Record<string, string | string[]>;
 }

@@ -33,6 +33,22 @@ export class BusinessAdminRepository {
     if (params?.search) queryParams.append('search', params.search);
     if (params?.sort) queryParams.append('sort', params.sort);
 
+    // Handle dynamic filters (supports both single-value and multi-select filters)
+    // Multi-select filters are converted to comma-separated strings
+    if (params?.filters) {
+      Object.entries(params.filters).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          // Multi-select filter: join array into comma-separated string
+          if (value.length > 0) {
+            queryParams.append(key, value.join(','));
+          }
+        } else if (value) {
+          // Single-value filter
+          queryParams.append(key, value);
+        }
+      });
+    }
+
     const url = `/admin/businesses?${queryParams.toString()}`;
     const response = await adminApiClient.get<any>(url);
 

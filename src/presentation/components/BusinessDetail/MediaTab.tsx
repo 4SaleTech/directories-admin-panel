@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toastService } from '@/application/services/toastService';
 import { adminApiClient } from '@/infrastructure/api/adminApiClient';
+import { s3UploadService } from '@/infrastructure/services/s3UploadService';
 import LoadingSpinner from '@/presentation/components/LoadingSpinner/LoadingSpinner';
 import { FiImage, FiPlus, FiTrash2, FiUpload } from 'react-icons/fi';
 import styles from './MediaTab.module.scss';
@@ -30,6 +31,9 @@ export default function MediaTab({ businessId }: MediaTabProps) {
     thumbnail_url: '',
   });
   const [isAdding, setIsAdding] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     loadMedia();
@@ -48,25 +52,58 @@ export default function MediaTab({ businessId }: MediaTabProps) {
     }
   };
 
-  const handleAddMedia = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (!newMedia.url) {
-      toastService.error('Please enter a media URL');
+    const validation = s3UploadService.validateFile(file);
+    if (!validation.valid) {
+      toastService.error(validation.error || 'Invalid file');
       return;
     }
 
+    setSelectedFile(file);
+    // Preview the file
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNewMedia({ ...newMedia, url: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddMedia = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     try {
       setIsAdding(true);
+      let mediaUrl = newMedia.url;
+
+      // If uploading a file, upload to S3 first
+      if (uploadMode === 'file' && selectedFile) {
+        toastService.info('Uploading to S3...');
+        mediaUrl = await s3UploadService.uploadFile({
+          file: selectedFile,
+          uploadType: 'business_media',
+          onProgress: setUploadProgress,
+        });
+        toastService.success('File uploaded to S3!');
+      } else if (uploadMode === 'url' && !newMedia.url) {
+        toastService.error('Please enter a media URL');
+        return;
+      }
+
+      // Create media record in database
       await adminApiClient.post(`/admin/businesses/${businessId}/media`, {
         type: newMedia.type,
-        url: newMedia.url,
+        url: mediaUrl,
         thumbnail_url: newMedia.thumbnail_url || undefined,
       });
 
       toastService.success('Media added successfully!');
       setShowAddModal(false);
       setNewMedia({ type: 'image', url: '', thumbnail_url: '' });
+      setSelectedFile(null);
+      setUploadProgress(0);
       loadMedia();
     } catch (err: any) {
       toastService.error(`Failed to add media: ${err.response?.data?.message || err.message}`);
@@ -189,6 +226,26 @@ export default function MediaTab({ businessId }: MediaTabProps) {
             <h2><FiUpload /> Add Gallery Media</h2>
             <form onSubmit={handleAddMedia}>
               <div className="form-group">
+                <label>Upload Mode *</label>
+                <div className={styles.uploadModeTabs}>
+                  <button
+                    type="button"
+                    className={`${styles.modeTab} ${uploadMode === 'file' ? styles.active : ''}`}
+                    onClick={() => setUploadMode('file')}
+                  >
+                    <FiUpload /> Upload File
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeTab} ${uploadMode === 'url' ? styles.active : ''}`}
+                    onClick={() => setUploadMode('url')}
+                  >
+                    <FiImage /> From URL
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group">
                 <label>Media Type *</label>
                 <select
                   value={newMedia.type}
@@ -200,17 +257,47 @@ export default function MediaTab({ businessId }: MediaTabProps) {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>Media URL *</label>
-                <input
-                  type="url"
-                  value={newMedia.url}
-                  onChange={(e) => setNewMedia({ ...newMedia, url: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                  required
-                />
-                <small>Full URL to the media file</small>
-              </div>
+              {uploadMode === 'file' ? (
+                <>
+                  <div className="form-group">
+                    <label>Select Image File *</label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleFileSelect}
+                      required
+                    />
+                    <small>Max size: 10MB. Supported: JPEG, PNG, GIF, WebP</small>
+                  </div>
+
+                  {selectedFile && (
+                    <div className={styles.filePreview}>
+                      <img src={newMedia.url} alt="Preview" />
+                      <p>{selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                    </div>
+                  )}
+
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className={styles.progressBar}>
+                      <div className={styles.progressFill} style={{ width: `${uploadProgress}%` }}>
+                        {uploadProgress}%
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="form-group">
+                  <label>Media URL *</label>
+                  <input
+                    type="url"
+                    value={newMedia.url}
+                    onChange={(e) => setNewMedia({ ...newMedia, url: e.target.value })}
+                    placeholder="https://example.com/image.jpg"
+                    required
+                  />
+                  <small>Full URL to the media file</small>
+                </div>
+              )}
 
               {newMedia.type === 'video' && (
                 <div className="form-group">

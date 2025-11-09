@@ -6,7 +6,9 @@ import LoadingSpinner from '@/presentation/components/LoadingSpinner/LoadingSpin
 import { badgeAdminRepository } from '@/infrastructure/repositories/BadgeAdminRepository';
 import { Badge, CreateBadgeRequest } from '@/domain/entities/Badge';
 import { toastService } from '@/application/services/toastService';
+import { s3UploadService } from '@/infrastructure/services/s3UploadService';
 import Image from 'next/image';
+import { FiUpload, FiImage } from 'react-icons/fi';
 import styles from './badges.module.scss';
 
 export default function BadgesPage() {
@@ -23,6 +25,13 @@ export default function BadgesPage() {
     image_url_ar: '',
     display_order: 0,
   });
+  const [uploadModeEn, setUploadModeEn] = useState<'url' | 'file'>('url');
+  const [uploadModeAr, setUploadModeAr] = useState<'url' | 'file'>('url');
+  const [selectedFileEn, setSelectedFileEn] = useState<File | null>(null);
+  const [selectedFileAr, setSelectedFileAr] = useState<File | null>(null);
+  const [uploadProgressEn, setUploadProgressEn] = useState(0);
+  const [uploadProgressAr, setUploadProgressAr] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     loadBadges();
@@ -42,6 +51,42 @@ export default function BadgesPage() {
     }
   };
 
+  const handleFileSelectEn = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = s3UploadService.validateFile(file);
+    if (!validation.valid) {
+      toastService.error(validation.error || 'Invalid file');
+      return;
+    }
+
+    setSelectedFileEn(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData({ ...formData, image_url_en: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileSelectAr = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = s3UploadService.validateFile(file);
+    if (!validation.valid) {
+      toastService.error(validation.error || 'Invalid file');
+      return;
+    }
+
+    setSelectedFileAr(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData({ ...formData, image_url_ar: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreate = () => {
     setEditingBadge(null);
     setFormData({
@@ -52,6 +97,12 @@ export default function BadgesPage() {
       image_url_ar: '',
       display_order: 0,
     });
+    setUploadModeEn('file');
+    setUploadModeAr('file');
+    setSelectedFileEn(null);
+    setSelectedFileAr(null);
+    setUploadProgressEn(0);
+    setUploadProgressAr(0);
     setShowModal(true);
   };
 
@@ -65,33 +116,76 @@ export default function BadgesPage() {
       image_url_ar: badge.image_url_ar || '',
       display_order: badge.display_order || 0,
     });
+    // Reset upload modes and file states for consistent behavior
+    setUploadModeEn('file');
+    setUploadModeAr('file');
+    setSelectedFileEn(null);
+    setSelectedFileAr(null);
+    setUploadProgressEn(0);
+    setUploadProgressAr(0);
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setIsUploading(true);
+      let imageUrlEn = formData.image_url_en;
+      let imageUrlAr = formData.image_url_ar;
+
+      // Upload English image if file mode
+      if (uploadModeEn === 'file' && selectedFileEn) {
+        toastService.info('Uploading English badge to S3...');
+        imageUrlEn = await s3UploadService.uploadFile({
+          file: selectedFileEn,
+          uploadType: 'badge',
+          onProgress: setUploadProgressEn,
+        });
+        toastService.success('English badge uploaded!');
+      }
+
+      // Upload Arabic image if file mode
+      if (uploadModeAr === 'file' && selectedFileAr) {
+        toastService.info('Uploading Arabic badge to S3...');
+        imageUrlAr = await s3UploadService.uploadFile({
+          file: selectedFileAr,
+          uploadType: 'badge',
+          onProgress: setUploadProgressAr,
+        });
+        toastService.success('Arabic badge uploaded!');
+      }
+
       if (editingBadge) {
         // Update - don't send slug
         const { slug, ...data } = formData;
-        await badgeAdminRepository.update(editingBadge.id, data);
+        await badgeAdminRepository.update(editingBadge.id, {
+          ...data,
+          image_url_en: imageUrlEn,
+          image_url_ar: imageUrlAr,
+        });
         toastService.success('Badge updated successfully!');
       } else {
         // Create - send data without slug (it's auto-generated)
         const payload: CreateBadgeRequest = {
           name: formData.name,
           name_ar: formData.name_ar,
-          image_url_en: formData.image_url_en,
-          image_url_ar: formData.image_url_ar,
+          image_url_en: imageUrlEn,
+          image_url_ar: imageUrlAr,
           display_order: formData.display_order,
         };
         await badgeAdminRepository.create(payload);
         toastService.success('Badge created successfully!');
       }
       setShowModal(false);
+      setSelectedFileEn(null);
+      setSelectedFileAr(null);
+      setUploadProgressEn(0);
+      setUploadProgressAr(0);
       loadBadges();
     } catch (err: any) {
       toastService.error(`Failed to save badge: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -248,34 +342,126 @@ export default function BadgesPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Image URL (English) *</label>
-                  <input
-                    type="url"
-                    value={formData.image_url_en}
-                    onChange={(e) => setFormData({ ...formData, image_url_en: e.target.value })}
-                    placeholder="https://example.com/badge-en.png"
-                    required
-                  />
-                  {formData.image_url_en && (
-                    <div className={styles.imagePreview}>
-                      <img src={formData.image_url_en} alt="English preview" />
-                    </div>
+                  <label>Image (English) *</label>
+                  <div className={styles.uploadModeTabs}>
+                    <button
+                      type="button"
+                      className={`${styles.modeTab} ${uploadModeEn === 'file' ? styles.active : ''}`}
+                      onClick={() => setUploadModeEn('file')}
+                    >
+                      <FiUpload /> Upload File
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.modeTab} ${uploadModeEn === 'url' ? styles.active : ''}`}
+                      onClick={() => setUploadModeEn('url')}
+                    >
+                      <FiImage /> From URL
+                    </button>
+                  </div>
+
+                  {uploadModeEn === 'file' ? (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        onChange={handleFileSelectEn}
+                        required={!formData.image_url_en}
+                      />
+                      <small>Max size: 10MB. Supported: JPEG, PNG, GIF, WebP</small>
+
+                      {selectedFileEn && (
+                        <div className={styles.filePreview}>
+                          <img src={formData.image_url_en} alt="Preview" />
+                          <p>{selectedFileEn.name} ({(selectedFileEn.size / 1024 / 1024).toFixed(2)} MB)</p>
+                        </div>
+                      )}
+
+                      {uploadProgressEn > 0 && uploadProgressEn < 100 && (
+                        <div className={styles.progressBar}>
+                          <div className={styles.progressFill} style={{ width: `${uploadProgressEn}%` }}>
+                            {uploadProgressEn}%
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="url"
+                        value={formData.image_url_en}
+                        onChange={(e) => setFormData({ ...formData, image_url_en: e.target.value })}
+                        placeholder="https://example.com/badge-en.png"
+                        required
+                      />
+                      {formData.image_url_en && (
+                        <div className={styles.imagePreview}>
+                          <img src={formData.image_url_en} alt="English preview" />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
                 <div className="form-group">
-                  <label>Image URL (Arabic) *</label>
-                  <input
-                    type="url"
-                    value={formData.image_url_ar}
-                    onChange={(e) => setFormData({ ...formData, image_url_ar: e.target.value })}
-                    placeholder="https://example.com/badge-ar.png"
-                    required
-                  />
-                  {formData.image_url_ar && (
-                    <div className={styles.imagePreview}>
-                      <img src={formData.image_url_ar} alt="Arabic preview" />
-                    </div>
+                  <label>Image (Arabic) *</label>
+                  <div className={styles.uploadModeTabs}>
+                    <button
+                      type="button"
+                      className={`${styles.modeTab} ${uploadModeAr === 'file' ? styles.active : ''}`}
+                      onClick={() => setUploadModeAr('file')}
+                    >
+                      <FiUpload /> Upload File
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.modeTab} ${uploadModeAr === 'url' ? styles.active : ''}`}
+                      onClick={() => setUploadModeAr('url')}
+                    >
+                      <FiImage /> From URL
+                    </button>
+                  </div>
+
+                  {uploadModeAr === 'file' ? (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        onChange={handleFileSelectAr}
+                        required={!formData.image_url_ar}
+                      />
+                      <small>Max size: 10MB. Supported: JPEG, PNG, GIF, WebP</small>
+
+                      {selectedFileAr && (
+                        <div className={styles.filePreview}>
+                          <img src={formData.image_url_ar} alt="Preview" />
+                          <p>{selectedFileAr.name} ({(selectedFileAr.size / 1024 / 1024).toFixed(2)} MB)</p>
+                        </div>
+                      )}
+
+                      {uploadProgressAr > 0 && uploadProgressAr < 100 && (
+                        <div className={styles.progressBar}>
+                          <div className={styles.progressFill} style={{ width: `${uploadProgressAr}%` }}>
+                            {uploadProgressAr}%
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="url"
+                        value={formData.image_url_ar}
+                        onChange={(e) => setFormData({ ...formData, image_url_ar: e.target.value })}
+                        placeholder="https://example.com/badge-ar.png"
+                        required
+                      />
+                      {formData.image_url_ar && (
+                        <div className={styles.imagePreview}>
+                          <img src={formData.image_url_ar} alt="Arabic preview" />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -293,13 +479,14 @@ export default function BadgesPage() {
                 </div>
 
                 <div className={styles.modalActions}>
-                  <button type="submit" className="btn btn-primary">
-                    {editingBadge ? 'Update' : 'Create'}
+                  <button type="submit" className="btn btn-primary" disabled={isUploading}>
+                    {isUploading ? 'Uploading...' : editingBadge ? 'Update' : 'Create'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
                     className="btn btn-secondary"
+                    disabled={isUploading}
                   >
                     Cancel
                   </button>
