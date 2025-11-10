@@ -44,7 +44,8 @@ export default function MenuTab({ businessId }: MenuTabProps) {
     try {
       setIsLoading(true);
       const response = await adminApiClient.get(`/admin/businesses/${businessId}/menu`);
-      setMenuItems(response.data?.data?.media || []);
+      // adminApiClient.get returns response.data directly, so response.data.media is the array
+      setMenuItems(response.data?.media || []);
     } catch (err: any) {
       console.error('Failed to load menu items:', err);
       toastService.error('Failed to load menu items');

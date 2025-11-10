@@ -44,7 +44,8 @@ export default function MediaTab({ businessId }: MediaTabProps) {
     try {
       setIsLoading(true);
       const response = await adminApiClient.get(`/admin/businesses/${businessId}/media`);
-      setMedia(response.data?.data?.media || []);
+      // adminApiClient.get returns response.data directly, so response.data.media is the array
+      setMedia(response.data?.media || []);
     } catch (err: any) {
       console.error('Failed to load media:', err);
       toastService.error('Failed to load gallery media');
