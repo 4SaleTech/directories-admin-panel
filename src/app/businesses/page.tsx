@@ -596,10 +596,15 @@ export default function BusinessesPage() {
                                   ? [...selectedValues, option.value]
                                   : selectedValues.filter((v) => v !== option.value);
 
-                                setDynamicFilters((prev) => ({
-                                  ...prev,
-                                  [filter.slug]: newValues.length > 0 ? newValues : undefined,
-                                }));
+                                setDynamicFilters((prev) => {
+                                  const updated = { ...prev };
+                                  if (newValues.length > 0) {
+                                    updated[filter.slug] = newValues;
+                                  } else {
+                                    delete updated[filter.slug];
+                                  }
+                                  return updated;
+                                });
                               }}
                             />
                             <span>{option.label}</span>
