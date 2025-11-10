@@ -620,10 +620,15 @@ export default function BusinessesPage() {
                       <select
                         value={(dynamicFilters[filter.slug] as string) || ''}
                         onChange={(e) => {
-                          setDynamicFilters((prev) => ({
-                            ...prev,
-                            [filter.slug]: e.target.value || undefined,
-                          }));
+                          setDynamicFilters((prev) => {
+                            const updated = { ...prev };
+                            if (e.target.value) {
+                              updated[filter.slug] = e.target.value;
+                            } else {
+                              delete updated[filter.slug];
+                            }
+                            return updated;
+                          });
                         }}
                       >
                         <option value="">{filter.label} (All)</option>
