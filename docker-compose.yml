@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  admin-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://staging-directories-apis.q84sale.com/api/v2}
+        NEXT_PUBLIC_4SALE_PRESIGNED_URL: ${NEXT_PUBLIC_4SALE_PRESIGNED_URL:-https://staging-services.q84sale.com/api/v1/presigned-uploader}
+        NEXT_PUBLIC_4SALE_API_TOKEN: ${NEXT_PUBLIC_4SALE_API_TOKEN}
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
