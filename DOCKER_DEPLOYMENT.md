@@ -24,8 +24,6 @@ docker run -p 3001:3001 admin-directories:latest
 # Build with production environment variables
 docker build \
   --build-arg NEXT_PUBLIC_API_BASE_URL=https://directories-apis.q84sale.com/api/v2 \
-  --build-arg NEXT_PUBLIC_4SALE_PRESIGNED_URL=https://services.q84sale.com/api/v1/presigned-uploader \
-  --build-arg NEXT_PUBLIC_4SALE_API_TOKEN=your-token \
   -t admin-directories:production .
 
 # Run production container
@@ -40,13 +38,13 @@ docker run -d \
 
 ## Environment Variables
 
-Required environment variables (set at build time):
+Required environment variable (set at build time):
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `NEXT_PUBLIC_API_BASE_URL` | Backend API URL | `https://staging-directories-apis.q84sale.com/api/v2` |
-| `NEXT_PUBLIC_4SALE_PRESIGNED_URL` | 4Sale upload service | `https://staging-services.q84sale.com/api/v1/presigned-uploader` |
-| `NEXT_PUBLIC_4SALE_API_TOKEN` | 4Sale API token | `2022697\|xxx` |
+
+**Note**: The admin UI only needs the backend API URL. All S3 uploads, authentication, and business logic are handled by the backend.
 
 ---
 
@@ -74,8 +72,6 @@ Create a `.env` file:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=https://staging-directories-apis.q84sale.com/api/v2
-NEXT_PUBLIC_4SALE_PRESIGNED_URL=https://staging-services.q84sale.com/api/v1/presigned-uploader
-NEXT_PUBLIC_4SALE_API_TOKEN=2022697|xxx
 ```
 
 ---
@@ -139,10 +135,6 @@ services:
     envVars:
       - key: NEXT_PUBLIC_API_BASE_URL
         value: https://directories-apis.q84sale.com/api/v2
-      - key: NEXT_PUBLIC_4SALE_PRESIGNED_URL
-        value: https://services.q84sale.com/api/v1/presigned-uploader
-      - key: NEXT_PUBLIC_4SALE_API_TOKEN
-        sync: false
     healthCheckPath: /
 ```
 
@@ -266,7 +258,6 @@ jobs:
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.API_URL }} \
-            --build-arg NEXT_PUBLIC_4SALE_API_TOKEN=${{ secrets.SALE_TOKEN }} \
             -t admin-directories:${{ github.sha }} .
 
       - name: Push to registry

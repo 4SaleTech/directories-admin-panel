@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { adminApiClient } from '../api/adminApiClient';
 import {
   FileUploadRequest,
   BulkFileUploadRequest,
@@ -12,9 +12,8 @@ import {
   MAX_FILES_PER_UPLOAD,
 } from '@/domain/entities/FileUpload';
 
-const PRESIGNED_URL_ENDPOINT =
-  process.env.NEXT_PUBLIC_4SALE_PRESIGNED_URL || 'https://staging-services.q84sale.com/api/v1/presigned-uploader';
-const API_TOKEN = process.env.NEXT_PUBLIC_4SALE_API_TOKEN;
+// Use backend API for uploads (not external 4Sale API)
+const UPLOAD_ENDPOINT = '/admin/upload/proxy';
 
 export class FileUploadService {
   /**
@@ -74,109 +73,45 @@ export class FileUploadService {
   }
 
   /**
-   * Request presigned URLs from 4Sale API
+   * Upload file to S3 via backend proxy
    */
-  private async getPresignedUrls(files: File[]): Promise<PresignedUrlResponse[]> {
-    if (!API_TOKEN) {
-      console.error('[FileUploadService] API token is missing!');
-      throw new Error('4Sale API token is not configured. Please add NEXT_PUBLIC_4SALE_API_TOKEN to your .env.local file.');
-    }
-
-    // Prepare request payload
-    const isSingleFile = files.length === 1;
-    const fileRequests: FileUploadRequest[] = files.map((file) => ({
-      mime: file.type,
-      size: file.size,
-      fileExtension: this.getFileExtension(file.name),
-      type: 'user-profile',
-    }));
-
-    try {
-      if (isSingleFile) {
-        // Single file upload
-        console.log('📤 REQUEST: Sending single file upload request');
-        console.log('🔗 Endpoint:', PRESIGNED_URL_ENDPOINT);
-        console.log('📦 Payload:', JSON.stringify(fileRequests[0], null, 2));
-
-        const response = await axios.post<PresignedUrlResponse>(PRESIGNED_URL_ENDPOINT, fileRequests[0], {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${API_TOKEN}`,
-          },
-        });
-
-        console.log('📥 RESPONSE: Received presigned URL response');
-        console.log('📦 Response data:', JSON.stringify(response.data, null, 2));
-
-        return [response.data];
-      } else {
-        // Bulk file upload
-        const payload: BulkFileUploadRequest = { files: fileRequests };
-
-        console.log('📤 REQUEST: Sending bulk file upload request');
-        console.log('🔗 Endpoint:', PRESIGNED_URL_ENDPOINT);
-        console.log('📦 Payload:', JSON.stringify(payload, null, 2));
-
-        const response = await axios.post<BulkPresignedUrlResponse>(PRESIGNED_URL_ENDPOINT, payload, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${API_TOKEN}`,
-          },
-        });
-
-        console.log('📥 RESPONSE: Received presigned URL response');
-        console.log('📦 Response data:', JSON.stringify(response.data, null, 2));
-
-        return response.data.files;
-      }
-    } catch (error: any) {
-      console.error('[FileUploadService] Error getting presigned URLs:', error.response?.data || error.message);
-
-      if (error.code === 'ERR_NETWORK') {
-        throw new Error('Network error: Unable to connect to 4Sale API. Please check your internet connection.');
-      }
-
-      throw new Error(error.response?.data?.error || error.message || 'Failed to get presigned URLs');
-    }
-  }
-
-  /**
-   * Upload a file to S3 using presigned URL (via proxy to avoid CORS)
-   */
-  private async uploadToS3(
+  private async uploadFileViaProxy(
     file: File,
-    presignedData: PresignedUrlResponse,
     onProgress?: (progress: number) => void
-  ): Promise<void> {
+  ): Promise<string> {
     try {
-      // Use our proxy API route to bypass CORS restrictions
-      const proxyUrl = `/api/upload-proxy?url=${encodeURIComponent(presignedData.uploadUrl)}`;
+      console.log('📤 Uploading file via backend:', file.name);
 
-      const response = await fetch(proxyUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': presignedData.headers['Content-Type'] || file.type,
-        },
-      });
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_type', 'business_media'); // Default to business_media
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
-      }
+      const response = await adminApiClient.post<{ file_url: string; key: string }>(
+        UPLOAD_ENDPOINT,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent: any) => {
+            if (onProgress && progressEvent.total) {
+              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              onProgress(progress);
+            }
+          },
+        }
+      );
 
-      // Call progress callback with 100% on success
-      if (onProgress) {
-        onProgress(100);
-      }
+      console.log('✅ Upload successful, file URL:', response.file_url);
+      return response.file_url;
     } catch (error: any) {
-      console.error('[FileUploadService] Failed to upload to S3:', error.message);
-      throw new Error(error.message || 'Failed to upload file to S3');
+      console.error('[FileUploadService] Upload failed:', error);
+      throw new Error(error.message || 'Failed to upload file to backend');
     }
   }
 
   /**
-   * Complete upload flow: get presigned URL → upload to S3 → return final URL
+   * Upload multiple files via backend proxy
    */
   public async uploadFiles(
     files: File[],
@@ -205,12 +140,8 @@ export class FileUploadService {
     };
 
     try {
-      // Step 1: Get presigned URLs
-      const presignedUrls = await this.getPresignedUrls(files);
-
-      // Step 2: Upload files to S3
-      const uploadPromises = files.map(async (file, index) => {
-        const presignedData = presignedUrls[index];
+      // Upload files via backend
+      const uploadPromises = files.map(async (file) => {
         const progress = progressMap.get(file.name);
 
         if (!progress) return null;
@@ -220,8 +151,8 @@ export class FileUploadService {
           progress.status = 'uploading';
           updateProgress();
 
-          // Upload to S3
-          await this.uploadToS3(file, presignedData, (percent) => {
+          // Upload via backend
+          const fileUrl = await this.uploadFileViaProxy(file, (percent) => {
             progress.progress = percent;
             updateProgress();
           });
@@ -231,18 +162,13 @@ export class FileUploadService {
           progress.progress = 100;
           updateProgress();
 
-          // Extract the final URL from the API response (nested in publicUrls.url)
-          const finalUrl = (presignedData as any).publicUrls?.url || presignedData.url;
-
-          // Log the uploaded image URL
           console.log('✅ Image uploaded successfully!');
           console.log('📸 File:', file.name);
-          console.log('🔗 URL:', finalUrl);
-          console.log('---');
+          console.log('🔗 URL:', fileUrl);
 
-          // Return uploaded file metadata with the URL from API response
+          // Return uploaded file metadata
           return {
-            url: finalUrl,
+            url: fileUrl,
             fileName: file.name,
             size: file.size,
             mimeType: file.type,

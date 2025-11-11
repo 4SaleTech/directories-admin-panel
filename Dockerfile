@@ -19,12 +19,8 @@ COPY . .
 
 # Build-time environment variables for Next.js
 ARG NEXT_PUBLIC_API_BASE_URL
-ARG NEXT_PUBLIC_4SALE_PRESIGNED_URL
-ARG NEXT_PUBLIC_4SALE_API_TOKEN
 
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
-ENV NEXT_PUBLIC_4SALE_PRESIGNED_URL=$NEXT_PUBLIC_4SALE_PRESIGNED_URL
-ENV NEXT_PUBLIC_4SALE_API_TOKEN=$NEXT_PUBLIC_4SALE_API_TOKEN
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry

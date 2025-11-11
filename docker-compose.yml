@@ -7,8 +7,6 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://staging-directories-apis.q84sale.com/api/v2}
-        NEXT_PUBLIC_4SALE_PRESIGNED_URL: ${NEXT_PUBLIC_4SALE_PRESIGNED_URL:-https://staging-services.q84sale.com/api/v1/presigned-uploader}
-        NEXT_PUBLIC_4SALE_API_TOKEN: ${NEXT_PUBLIC_4SALE_API_TOKEN}
     ports:
       - "3001:3001"
     environment:
