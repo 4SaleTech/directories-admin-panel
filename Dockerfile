@@ -55,6 +55,7 @@ USER nextjs
 
 EXPOSE 80
 
+ENV PORT=80
 # set hostname to localhost
 ENV HOSTNAME="0.0.0.0"
 
