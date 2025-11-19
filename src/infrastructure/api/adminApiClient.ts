@@ -15,10 +15,10 @@ const getApiBaseUrl = (): string => {
     return 'http://localhost:8080/api/v2';
   } else if (hostname.includes('staging')) {
     // Staging environment
-    return 'https://directories-apis-staging.q84sale.com/api/v2';
+    return 'https://staging-directories-apis.q84sale.com/api/v2';
   } else if (hostname.includes('dev') || hostname.includes('integration')) {
     // Dev environment
-    return 'https://directories-apis-dev.q84sale.com/api/v2';
+    return 'https://dev-directories-apis.q84sale.com/api/v2';
   } else {
     // Production environment (directories-admin.q84sale.com)
     return 'https://directories-apis.q84sale.com/api/v2';
