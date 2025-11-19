@@ -1,23 +1,57 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v2';
+// Hardcoded API URLs based on environment
+const getApiBaseUrl = (): string => {
+  if (typeof window === 'undefined') {
+    // Server-side: default to production
+    return 'https://directories-apis.q84sale.com/api/v2';
+  }
+
+  // Client-side: detect environment from hostname
+  const hostname = window.location.hostname;
+
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    // Local development
+    return 'http://localhost:8080/api/v2';
+  } else if (hostname.includes('staging')) {
+    // Staging environment
+    return 'https://directories-apis-staging.q84sale.com/api/v2';
+  } else if (hostname.includes('dev') || hostname.includes('integration')) {
+    // Dev environment
+    return 'https://directories-apis-dev.q84sale.com/api/v2';
+  } else {
+    // Production environment (directories-admin.q84sale.com)
+    return 'https://directories-apis.q84sale.com/api/v2';
+  }
+};
 
 export class AdminApiClient {
   private client: AxiosInstance;
   private token: string | null = null;
+  private clientInitialized: boolean = false;
 
   constructor() {
+    // Get API URL - will re-evaluate on client side
+    const apiBaseUrl = getApiBaseUrl();
+
     this.client = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: apiBaseUrl,
       headers: {
         'Content-Type': 'application/json',
       },
       timeout: 30000,
     });
 
-    // Request interceptor to add auth token
+    // Request interceptor to add auth token and reinitialize baseURL on client
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
+        // Reinitialize baseURL on first client-side request
+        if (!this.clientInitialized && typeof window !== 'undefined') {
+          const clientBaseUrl = getApiBaseUrl();
+          this.client.defaults.baseURL = clientBaseUrl;
+          this.clientInitialized = true;
+        }
+
         if (this.token && config.headers) {
           config.headers.Authorization = `Bearer ${this.token}`;
         }
