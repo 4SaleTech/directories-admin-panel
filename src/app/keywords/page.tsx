@@ -480,10 +480,7 @@ export default function KeywordsPage() {
                             }
                           }}
                         />
-                        <span>
-                          {category.icon} {category.name}
-                          {category.name_ar && ` (${category.name_ar})`}
-                        </span>
+                        <span>{category.name}</span>
                       </label>
                     ))}
                   </div>
