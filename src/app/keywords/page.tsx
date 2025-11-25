@@ -40,7 +40,7 @@ export default function KeywordsPage() {
   const [originalCategoryIds, setOriginalCategoryIds] = useState<number[]>([]);
 
   const bulkSelection = useBulkSelection({
-    items: keywords,
+    items: Array.isArray(keywords) ? keywords : [],
     getItemId: (keyword) => keyword.id,
   });
 
@@ -73,12 +73,14 @@ export default function KeywordsPage() {
       if (debouncedSearch) params.search = debouncedSearch;
 
       const response = await searchKeywordAdminRepository.getAll(params);
-      setKeywords(response.data || []);
+      const keywordsData = Array.isArray(response.data) ? response.data : [];
+      setKeywords(keywordsData);
       setTotalPages(response.pagination?.total_pages || 1);
       setTotalItems(response.pagination?.total_count || 0);
     } catch (err: any) {
       console.error('Failed to load keywords:', err);
       setError('Failed to load keywords');
+      setKeywords([]); // Ensure keywords is always an array even on error
     } finally {
       setIsLoading(false);
     }
@@ -307,16 +309,23 @@ export default function KeywordsPage() {
                 </tr>
               </thead>
               <tbody>
-                {keywords.map((keyword) => (
-                  <tr key={keyword.id}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={bulkSelection.isSelected(keyword.id)}
-                        onChange={() => bulkSelection.toggleSelection(keyword.id)}
-                        style={{ cursor: 'pointer' }}
-                      />
+                {keywords.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                      No keywords found
                     </td>
+                  </tr>
+                ) : (
+                  keywords.map((keyword) => (
+                    <tr key={keyword.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={bulkSelection.isSelected(keyword.id)}
+                          onChange={() => bulkSelection.toggleSelection(keyword.id)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
                     <td>{keyword.id}</td>
                     <td>
                       <strong>{keyword.keyword}</strong>
@@ -365,7 +374,8 @@ export default function KeywordsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>

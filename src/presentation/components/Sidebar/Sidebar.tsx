@@ -13,6 +13,7 @@ export default function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/businesses', label: 'Businesses', icon: '🏢' },
     { href: '/categories', label: 'Categories', icon: '📁' },
+    { href: '/keywords', label: 'Keywords', icon: '🔑' },
     { href: '/sections', label: 'Sections', icon: '📑' },
     { href: '/tags', label: 'Tags', icon: '🏷️' },
     { href: '/badges', label: 'Badges', icon: '🏆' },
