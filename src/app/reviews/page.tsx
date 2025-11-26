@@ -58,7 +58,7 @@ export default function ReviewsPage() {
   const loadSummary = async () => {
     try {
       const response = await reviewAdminRepository.getModerationSummary();
-      setSummary(response.data);
+      setSummary(response.data || null);
     } catch (err) {
       console.error('Failed to load summary:', err);
     }
