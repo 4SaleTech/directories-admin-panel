@@ -1,0 +1,396 @@
+.reportsPage {
+  padding: 2rem;
+}
+
+.header {
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 2rem;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #666;
+    font-size: 1rem;
+  }
+}
+
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summaryCard {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+
+  &.pending {
+    border-left: 4px solid #f59e0b;
+  }
+
+  &.reviewed {
+    border-left: 4px solid #3b82f6;
+  }
+
+  &.resolved {
+    border-left: 4px solid #10b981;
+  }
+
+  &.dismissed {
+    border-left: 4px solid #6b7280;
+  }
+}
+
+.summaryNumber {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.summaryLabel {
+  color: #666;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filterTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.filterTab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+
+  &:hover {
+    color: #1a1a1a;
+    background: #f9fafb;
+  }
+
+  &.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+  }
+}
+
+.badge {
+  display: inline-block;
+  background: #f59e0b;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+  margin-left: 0.5rem;
+  font-weight: bold;
+}
+
+.reportsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.reportCard {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.reportHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.reportMeta {
+  flex: 1;
+}
+
+.reportId {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #1a1a1a;
+  margin-bottom: 0.25rem;
+}
+
+.reportDate {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.statusBadges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badgePending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badgeReviewed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badgeResolved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badgeDismissed {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.reasonBadge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.reasonSpam {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.reasonInappropriate {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.reasonOffensive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.reasonFake {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.reasonOther {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.reportContent {
+  margin-bottom: 1rem;
+}
+
+.reviewInfo {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+
+  h4 {
+    font-size: 1rem;
+    color: #1a1a1a;
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    margin-bottom: 0.5rem;
+    color: #4b5563;
+    font-size: 0.9rem;
+  }
+}
+
+.reviewComment {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+
+  strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #1a1a1a;
+  }
+
+  p {
+    color: #4b5563;
+    line-height: 1.6;
+    font-style: italic;
+  }
+}
+
+.reportComment {
+  background: #fef3c7;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+
+  strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #92400e;
+  }
+
+  p {
+    color: #78350f;
+    line-height: 1.6;
+  }
+}
+
+.reportActions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.reviewedBtn,
+.resolveBtn,
+.dismissBtn,
+.deleteBtn {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  border-radius: 6px;
+  transition: all 0.2s;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.reviewedBtn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.resolveBtn {
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  }
+}
+
+.dismissBtn {
+  background: #6b7280;
+  color: white;
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+  }
+}
+
+.deleteBtn {
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #999;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  p {
+    font-size: 1.1rem;
+  }
+}
+
+.resultsInfo {
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .reportsPage {
+    padding: 1rem;
+  }
+
+  .summaryCards {
+    grid-template-columns: 1fr;
+  }
+
+  .filterTabs {
+    flex-wrap: wrap;
+  }
+
+  .filterTab {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .reportHeader {
+    flex-direction: column;
+  }
+
+  .statusBadges {
+    margin-top: 0.5rem;
+  }
+
+  .reportActions {
+    flex-direction: column;
+  }
+
+  .reviewedBtn,
+  .resolveBtn,
+  .dismissBtn,
+  .deleteBtn {
+    width: 100%;
+  }
+}

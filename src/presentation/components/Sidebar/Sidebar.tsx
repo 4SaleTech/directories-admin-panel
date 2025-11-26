@@ -15,6 +15,7 @@ export default function Sidebar() {
     { href: '/categories', label: 'Categories', icon: '📁' },
     { href: '/keywords', label: 'Keywords', icon: '🔑' },
     { href: '/reviews', label: 'Reviews', icon: '⭐' },
+    { href: '/review-reports', label: 'Review Reports', icon: '🚩' },
     { href: '/sections', label: 'Sections', icon: '📑' },
     { href: '/tags', label: 'Tags', icon: '🏷️' },
     { href: '/badges', label: 'Badges', icon: '🏆' },
