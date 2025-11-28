@@ -28,6 +28,8 @@ export class BusinessAdminRepository {
       queryParams.append('is_verified', params.is_verified.toString());
     if (params?.is_featured !== undefined)
       queryParams.append('is_featured', params.is_featured.toString());
+    if (params?.has_logo !== undefined)
+      queryParams.append('has_logo', params.has_logo.toString());
     if (params?.category_id)
       queryParams.append('category_id', params.category_id.toString());
     if (params?.search) queryParams.append('search', params.search);
