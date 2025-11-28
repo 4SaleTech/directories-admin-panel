@@ -4,7 +4,13 @@
  */
 
 export interface LogoGenerationResponse {
+  success: boolean;
   logo_url: string;
+  platform?: string;
+  score?: number;
+  size?: string;
+  is_square?: boolean;
+  source_url?: string;
 }
 
 export class LogoGenerationService {
@@ -40,10 +46,15 @@ export class LogoGenerationService {
       });
 
       if (!response.ok) {
-        throw new Error(`Logo generation failed: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Logo generation failed (${response.status}): ${errorText}`);
       }
 
       const data: LogoGenerationResponse = await response.json();
+
+      if (!data.success) {
+        throw new Error('Logo generation was not successful');
+      }
 
       if (!data.logo_url) {
         throw new Error('No logo URL returned from API');
