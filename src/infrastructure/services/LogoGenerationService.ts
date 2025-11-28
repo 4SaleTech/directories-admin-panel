@@ -1,7 +1,9 @@
 /**
  * Logo Generation Service
- * Generates business logos using external API
+ * Generates business logos using backend API proxy
  */
+
+import { adminApiClient } from '../api/adminApiClient';
 
 export interface LogoGenerationResponse {
   success: boolean;
@@ -15,7 +17,6 @@ export interface LogoGenerationResponse {
 
 export class LogoGenerationService {
   private static instance: LogoGenerationService;
-  private apiUrl = 'https://icon-generator-six.vercel.app/api/fetch-and-upload-logo';
 
   private constructor() {}
 
@@ -34,36 +35,26 @@ export class LogoGenerationService {
    */
   async generateLogo(businessName: string, country: string = 'kuwait'): Promise<string> {
     try {
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          country,
+      const response = await adminApiClient.post<LogoGenerationResponse>(
+        '/admin/businesses/generate-logo',
+        {
           business_name: businessName,
-        }),
-      });
+          country,
+        }
+      );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Logo generation failed (${response.status}): ${errorText}`);
-      }
-
-      const data: LogoGenerationResponse = await response.json();
-
-      if (!data.success) {
+      if (!response.success) {
         throw new Error('Logo generation was not successful');
       }
 
-      if (!data.logo_url) {
+      if (!response.logo_url) {
         throw new Error('No logo URL returned from API');
       }
 
-      return data.logo_url;
-    } catch (error) {
+      return response.logo_url;
+    } catch (error: any) {
       console.error('Error generating logo:', error);
-      throw error;
+      throw new Error(error.response?.data?.message || error.message || 'Failed to generate logo');
     }
   }
 }
