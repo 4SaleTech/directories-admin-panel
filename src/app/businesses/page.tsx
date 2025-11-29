@@ -1169,36 +1169,36 @@ export default function BusinessesPage() {
                       </p>
                       <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '10px' }}>
                         {socialMediaSuggestions.map((link, index) => (
-                          <div
+                          <label
                             key={index}
                             style={{
-                              padding: '8px',
-                              marginBottom: '6px',
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '10px',
+                              padding: '10px',
+                              marginBottom: '8px',
                               backgroundColor: 'white',
                               borderRadius: '4px',
                               border: selectedSocialMediaLinks.has(index) ? '2px solid #2196f3' : '1px solid #ddd',
                               cursor: 'pointer',
                               transition: 'all 0.2s'
                             }}
-                            onClick={() => handleToggleSocialMediaLink(index)}
                           >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                              <input
-                                type="checkbox"
-                                checked={selectedSocialMediaLinks.has(index)}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleSocialMediaLink(index);
-                                }}
-                                style={{ cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
-                              />
-                              <div style={{ flex: 1 }}>
-                                <strong style={{ color: '#1565c0', fontSize: '14px' }}>{link.platform}</strong>
-                                <br />
-                                <small style={{ color: '#666', wordBreak: 'break-all', fontSize: '12px' }}>{link.url}</small>
+                            <input
+                              type="checkbox"
+                              checked={selectedSocialMediaLinks.has(index)}
+                              onChange={() => handleToggleSocialMediaLink(index)}
+                              style={{ cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ color: '#1565c0', fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
+                                {link.platform}
+                              </div>
+                              <div style={{ color: '#666', fontSize: '12px', wordBreak: 'break-all' }}>
+                                {link.url}
                               </div>
                             </div>
-                          </div>
+                          </label>
                         ))}
                       </div>
                       <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
