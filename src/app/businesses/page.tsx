@@ -1134,25 +1134,26 @@ export default function BusinessesPage() {
                       </div>
                     </div>
                   )}
+                </div>
 
-                  {/* Social Media Fetch */}
-                  <div style={{ marginTop: '15px' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleFetchSocialMedia(formData.name)}
-                      disabled={isFetchingSocialMedia || !formData.name}
-                      className="btn btn-info btn-sm"
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                      <FiShare2 />
-                      {isFetchingSocialMedia ? 'Fetching Social Media...' : 'Fetch Social Media'}
-                    </button>
-                    {!formData.name && (
-                      <small style={{ color: '#999', fontSize: '12px', marginTop: '5px', display: 'block' }}>
-                        Enter business name first to fetch social media
-                      </small>
-                    )}
-                  </div>
+                {/* Social Media Fetch - Separate Form Group */}
+                <div className="form-group">
+                  <label>Social Media Discovery</label>
+                  <button
+                    type="button"
+                    onClick={() => handleFetchSocialMedia(formData.name)}
+                    disabled={isFetchingSocialMedia || !formData.name}
+                    className="btn btn-info btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <FiShare2 />
+                    {isFetchingSocialMedia ? 'Fetching Social Media...' : 'Fetch Social Media Links'}
+                  </button>
+                  {!formData.name && (
+                    <small style={{ color: '#999', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                      Enter business name first to fetch social media
+                    </small>
+                  )}
 
                   {/* Social Media Suggestions Preview */}
                   {showSocialMediaSuggestions && socialMediaSuggestions.length > 0 && (
@@ -1166,13 +1167,13 @@ export default function BusinessesPage() {
                       <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#1565c0' }}>
                         Found Social Media Links ({socialMediaSuggestions.length})
                       </p>
-                      <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '10px' }}>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '10px' }}>
                         {socialMediaSuggestions.map((link, index) => (
                           <div
                             key={index}
                             style={{
-                              padding: '10px',
-                              marginBottom: '8px',
+                              padding: '8px',
+                              marginBottom: '6px',
                               backgroundColor: 'white',
                               borderRadius: '4px',
                               border: selectedSocialMediaLinks.has(index) ? '2px solid #2196f3' : '1px solid #ddd',
@@ -1181,17 +1182,20 @@ export default function BusinessesPage() {
                             }}
                             onClick={() => handleToggleSocialMediaLink(index)}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <input
                                 type="checkbox"
                                 checked={selectedSocialMediaLinks.has(index)}
-                                onChange={() => handleToggleSocialMediaLink(index)}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleSocialMediaLink(index);
+                                }}
                                 style={{ cursor: 'pointer' }}
                               />
                               <div style={{ flex: 1 }}>
-                                <strong style={{ color: '#1565c0' }}>{link.platform}</strong>
+                                <strong style={{ color: '#1565c0', fontSize: '14px' }}>{link.platform}</strong>
                                 <br />
-                                <small style={{ color: '#666', wordBreak: 'break-all' }}>{link.url}</small>
+                                <small style={{ color: '#666', wordBreak: 'break-all', fontSize: '12px' }}>{link.url}</small>
                               </div>
                             </div>
                           </div>
