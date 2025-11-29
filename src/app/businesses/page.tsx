@@ -1157,51 +1157,35 @@ export default function BusinessesPage() {
 
                   {/* Social Media Suggestions Preview */}
                   {showSocialMediaSuggestions && socialMediaSuggestions.length > 0 && (
-                    <div style={{
-                      marginTop: '15px',
-                      padding: '15px',
-                      border: '2px solid #2196f3',
-                      borderRadius: '8px',
-                      backgroundColor: '#e3f2fd'
-                    }}>
-                      <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#1565c0' }}>
+                    <div className={styles.socialMediaSuggestions}>
+                      <p className={styles.suggestionsHeader}>
                         Found Social Media Links ({socialMediaSuggestions.length})
                       </p>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '10px' }}>
+                      <div className={styles.suggestionsList}>
                         {socialMediaSuggestions.map((link, index) => (
                           <label
                             key={index}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              padding: '10px',
-                              marginBottom: '8px',
-                              backgroundColor: 'white',
-                              borderRadius: '4px',
-                              border: selectedSocialMediaLinks.has(index) ? '2px solid #2196f3' : '1px solid #ddd',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s'
-                            }}
+                            className={`${styles.suggestionItem} ${
+                              selectedSocialMediaLinks.has(index) ? styles.selected : ''
+                            }`}
                           >
                             <input
                               type="checkbox"
                               checked={selectedSocialMediaLinks.has(index)}
                               onChange={() => handleToggleSocialMediaLink(index)}
-                              style={{ cursor: 'pointer', flexShrink: 0 }}
                             />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ color: '#1565c0', fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
+                            <div className={styles.suggestionContent}>
+                              <div className={styles.suggestionPlatform}>
                                 {link.platform}
                               </div>
-                              <div style={{ color: '#666', fontSize: '12px', wordBreak: 'break-all' }}>
+                              <div className={styles.suggestionUrl}>
                                 {link.url}
                               </div>
                             </div>
                           </label>
                         ))}
                       </div>
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                      <div className={styles.suggestionsActions}>
                         <button
                           type="button"
                           onClick={handleApproveSelectedSocialMedia}
