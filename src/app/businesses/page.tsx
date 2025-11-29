@@ -1173,7 +1173,7 @@ export default function BusinessesPage() {
                             key={index}
                             style={{
                               display: 'flex',
-                              alignItems: 'flex-start',
+                              alignItems: 'center',
                               gap: '10px',
                               padding: '10px',
                               marginBottom: '8px',
@@ -1188,7 +1188,7 @@ export default function BusinessesPage() {
                               type="checkbox"
                               checked={selectedSocialMediaLinks.has(index)}
                               onChange={() => handleToggleSocialMediaLink(index)}
-                              style={{ cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
+                              style={{ cursor: 'pointer', flexShrink: 0 }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ color: '#1565c0', fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
