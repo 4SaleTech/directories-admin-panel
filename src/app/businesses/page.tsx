@@ -21,6 +21,7 @@ import { Badge } from '@/domain/entities/Badge';
 import { Filter } from '@/domain/entities/Filter';
 import { toastService } from '@/application/services/toastService';
 import { logoGenerationService } from '@/infrastructure/services/LogoGenerationService';
+import { socialMediaFetchService, SocialMediaLink } from '@/infrastructure/services/SocialMediaFetchService';
 import {
   FiCheck,
   FiX,
@@ -34,7 +35,8 @@ import {
   FiPlay,
   FiPlus,
   FiEye,
-  FiImage
+  FiImage,
+  FiShare2
 } from 'react-icons/fi';
 import 'react-quill/dist/quill.snow.css';
 import styles from './businesses.module.scss';
@@ -106,6 +108,12 @@ export default function BusinessesPage() {
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [showLogoSuggestion, setShowLogoSuggestion] = useState(false);
   const [generatingForBusinessId, setGeneratingForBusinessId] = useState<number | null>(null);
+
+  // Social media fetch state
+  const [socialMediaSuggestions, setSocialMediaSuggestions] = useState<SocialMediaLink[]>([]);
+  const [isFetchingSocialMedia, setIsFetchingSocialMedia] = useState(false);
+  const [showSocialMediaSuggestions, setShowSocialMediaSuggestions] = useState(false);
+  const [selectedSocialMediaLinks, setSelectedSocialMediaLinks] = useState<Set<number>>(new Set());
 
   // Badge assignment state
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -553,6 +561,53 @@ export default function BusinessesPage() {
     setLogoSuggestion(null);
     setGeneratingForBusinessId(null);
     toastService.info('Logo suggestion rejected');
+  };
+
+  // Social media fetch handlers
+  const handleFetchSocialMedia = async (businessName: string) => {
+    try {
+      setIsFetchingSocialMedia(true);
+      const links = await socialMediaFetchService.fetchSocialMedia(businessName);
+      setSocialMediaSuggestions(links);
+      setShowSocialMediaSuggestions(true);
+      setSelectedSocialMediaLinks(new Set(links.map((_, index) => index))); // Select all by default
+      toastService.success(`Found ${links.length} social media link(s)!`);
+    } catch (err: any) {
+      toastService.error(`Failed to fetch social media: ${err.message}`);
+    } finally {
+      setIsFetchingSocialMedia(false);
+    }
+  };
+
+  const handleToggleSocialMediaLink = (index: number) => {
+    const newSelected = new Set(selectedSocialMediaLinks);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedSocialMediaLinks(newSelected);
+  };
+
+  const handleApproveSelectedSocialMedia = () => {
+    const selectedLinks = socialMediaSuggestions
+      .filter((_, index) => selectedSocialMediaLinks.has(index))
+      .map(link => `${link.platform}: ${link.url}`)
+      .join('\n');
+
+    toastService.success(`Approved ${selectedSocialMediaLinks.size} social media link(s)!`);
+    toastService.info(`Selected links:\n${selectedLinks}`);
+
+    setShowSocialMediaSuggestions(false);
+    setSocialMediaSuggestions([]);
+    setSelectedSocialMediaLinks(new Set());
+  };
+
+  const handleRejectSocialMedia = () => {
+    setShowSocialMediaSuggestions(false);
+    setSocialMediaSuggestions([]);
+    setSelectedSocialMediaLinks(new Set());
+    toastService.info('Social media suggestions rejected');
   };
 
   return (
@@ -1075,6 +1130,90 @@ export default function BusinessesPage() {
                           style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
                         >
                           <FiX /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Social Media Fetch */}
+                  <div style={{ marginTop: '15px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleFetchSocialMedia(formData.name)}
+                      disabled={isFetchingSocialMedia || !formData.name}
+                      className="btn btn-info btn-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <FiShare2 />
+                      {isFetchingSocialMedia ? 'Fetching Social Media...' : 'Fetch Social Media'}
+                    </button>
+                    {!formData.name && (
+                      <small style={{ color: '#999', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                        Enter business name first to fetch social media
+                      </small>
+                    )}
+                  </div>
+
+                  {/* Social Media Suggestions Preview */}
+                  {showSocialMediaSuggestions && socialMediaSuggestions.length > 0 && (
+                    <div style={{
+                      marginTop: '15px',
+                      padding: '15px',
+                      border: '2px solid #2196f3',
+                      borderRadius: '8px',
+                      backgroundColor: '#e3f2fd'
+                    }}>
+                      <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#1565c0' }}>
+                        Found Social Media Links ({socialMediaSuggestions.length})
+                      </p>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '10px' }}>
+                        {socialMediaSuggestions.map((link, index) => (
+                          <div
+                            key={index}
+                            style={{
+                              padding: '10px',
+                              marginBottom: '8px',
+                              backgroundColor: 'white',
+                              borderRadius: '4px',
+                              border: selectedSocialMediaLinks.has(index) ? '2px solid #2196f3' : '1px solid #ddd',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={() => handleToggleSocialMediaLink(index)}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedSocialMediaLinks.has(index)}
+                                onChange={() => handleToggleSocialMediaLink(index)}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <strong style={{ color: '#1565c0' }}>{link.platform}</strong>
+                                <br />
+                                <small style={{ color: '#666', wordBreak: 'break-all' }}>{link.url}</small>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={handleApproveSelectedSocialMedia}
+                          className="btn btn-success btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                          disabled={selectedSocialMediaLinks.size === 0}
+                        >
+                          <FiCheck /> Approve Selected ({selectedSocialMediaLinks.size})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRejectSocialMedia}
+                          className="btn btn-danger btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <FiX /> Reject All
                         </button>
                       </div>
                     </div>
