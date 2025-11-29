@@ -1182,7 +1182,7 @@ export default function BusinessesPage() {
                             }}
                             onClick={() => handleToggleSocialMediaLink(index)}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                               <input
                                 type="checkbox"
                                 checked={selectedSocialMediaLinks.has(index)}
@@ -1190,7 +1190,7 @@ export default function BusinessesPage() {
                                   e.stopPropagation();
                                   handleToggleSocialMediaLink(index);
                                 }}
-                                style={{ cursor: 'pointer' }}
+                                style={{ cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
                               />
                               <div style={{ flex: 1 }}>
                                 <strong style={{ color: '#1565c0', fontSize: '14px' }}>{link.platform}</strong>
