@@ -20,6 +20,8 @@ import { Tag } from '@/domain/entities/Tag';
 import { Badge } from '@/domain/entities/Badge';
 import { Filter } from '@/domain/entities/Filter';
 import { toastService } from '@/application/services/toastService';
+import { logoGenerationService } from '@/infrastructure/services/LogoGenerationService';
+import { socialMediaFetchService, SocialMediaLink } from '@/infrastructure/services/SocialMediaFetchService';
 import {
   FiCheck,
   FiX,
@@ -32,7 +34,9 @@ import {
   FiPause,
   FiPlay,
   FiPlus,
-  FiEye
+  FiEye,
+  FiImage,
+  FiShare2
 } from 'react-icons/fi';
 import 'react-quill/dist/quill.snow.css';
 import styles from './businesses.module.scss';
@@ -98,6 +102,19 @@ export default function BusinessesPage() {
   const [categoryFilters, setCategoryFilters] = useState<Filter[]>([]);
   const [loadingFilters, setLoadingFilters] = useState(false);
 
+  // Logo generation state
+  const [hasLogoFilter, setHasLogoFilter] = useState<string>('');
+  const [logoSuggestion, setLogoSuggestion] = useState<string | null>(null);
+  const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
+  const [showLogoSuggestion, setShowLogoSuggestion] = useState(false);
+  const [generatingForBusinessId, setGeneratingForBusinessId] = useState<number | null>(null);
+
+  // Social media fetch state
+  const [socialMediaSuggestions, setSocialMediaSuggestions] = useState<SocialMediaLink[]>([]);
+  const [isFetchingSocialMedia, setIsFetchingSocialMedia] = useState(false);
+  const [showSocialMediaSuggestions, setShowSocialMediaSuggestions] = useState(false);
+  const [selectedSocialMediaLinks, setSelectedSocialMediaLinks] = useState<Set<number>>(new Set());
+
   // Badge assignment state
   const [badges, setBadges] = useState<Badge[]>([]);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
@@ -123,12 +140,12 @@ export default function BusinessesPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort, filters.category_id, dynamicFilters]);
+  }, [filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort, filters.category_id, dynamicFilters, hasLogoFilter]);
 
   useEffect(() => {
     loadBusinesses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort, filters.category_id, dynamicFilters]);
+  }, [currentPage, filters.status, filters.search, filters.is_verified, filters.is_featured, filters.sort, filters.category_id, dynamicFilters, hasLogoFilter]);
 
   useEffect(() => {
     bulkSelection.clearSelection();
@@ -258,6 +275,7 @@ export default function BusinessesPage() {
       if (filters.is_featured) params.is_featured = filters.is_featured === 'true';
       if (filters.sort) params.sort = filters.sort;
       if (filters.category_id) params.category_id = parseInt(filters.category_id);
+      if (hasLogoFilter) params.has_logo = hasLogoFilter === 'true';
 
       // Add dynamic filters if any are set
       if (Object.keys(dynamicFilters).length > 0) {
@@ -485,6 +503,113 @@ export default function BusinessesPage() {
     return badges[status] || 'badge-secondary';
   };
 
+  // Logo generation handlers
+  const handleGenerateLogo = async (businessName: string, forBusinessId?: number) => {
+    try {
+      setIsGeneratingLogo(true);
+      if (forBusinessId) {
+        setGeneratingForBusinessId(forBusinessId);
+      }
+
+      const logoUrl = await logoGenerationService.generateLogo(businessName);
+      setLogoSuggestion(logoUrl);
+      setShowLogoSuggestion(true);
+      toastService.success('Logo generated successfully!');
+    } catch (err: any) {
+      toastService.error(`Failed to generate logo: ${err.message}`);
+    } finally {
+      setIsGeneratingLogo(false);
+      if (forBusinessId) {
+        setGeneratingForBusinessId(null);
+      }
+    }
+  };
+
+  const handleAcceptLogo = async () => {
+    if (!logoSuggestion) return;
+
+    try {
+      // If generating for a business from the table
+      if (generatingForBusinessId) {
+        await businessAdminRepository.update(generatingForBusinessId, { logo: logoSuggestion });
+        toastService.success('Logo updated successfully!');
+        loadBusinesses();
+      }
+      // If editing a business in the modal
+      else if (editingBusiness) {
+        await businessAdminRepository.update(editingBusiness.id, { logo: logoSuggestion });
+        toastService.success('Logo updated successfully!');
+        loadBusinesses();
+        setFormData({ ...formData, logo: logoSuggestion });
+      }
+      // If creating a new business, just update form data
+      else {
+        setFormData({ ...formData, logo: logoSuggestion });
+        toastService.success('Logo added to form!');
+      }
+
+      setShowLogoSuggestion(false);
+      setLogoSuggestion(null);
+      setGeneratingForBusinessId(null);
+    } catch (err: any) {
+      toastService.error(`Failed to update logo: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  const handleRejectLogo = () => {
+    setShowLogoSuggestion(false);
+    setLogoSuggestion(null);
+    setGeneratingForBusinessId(null);
+    toastService.info('Logo suggestion rejected');
+  };
+
+  // Social media fetch handlers
+  const handleFetchSocialMedia = async (businessName: string) => {
+    try {
+      setIsFetchingSocialMedia(true);
+      const links = await socialMediaFetchService.fetchSocialMedia(businessName);
+      setSocialMediaSuggestions(links);
+      setShowSocialMediaSuggestions(true);
+      setSelectedSocialMediaLinks(new Set(links.map((_, index) => index))); // Select all by default
+      toastService.success(`Found ${links.length} social media link(s)!`);
+    } catch (err: any) {
+      toastService.error(`Failed to fetch social media: ${err.message}`);
+    } finally {
+      setIsFetchingSocialMedia(false);
+    }
+  };
+
+  const handleToggleSocialMediaLink = (index: number) => {
+    const newSelected = new Set(selectedSocialMediaLinks);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedSocialMediaLinks(newSelected);
+  };
+
+  const handleApproveSelectedSocialMedia = () => {
+    const selectedLinks = socialMediaSuggestions
+      .filter((_, index) => selectedSocialMediaLinks.has(index))
+      .map(link => `${link.platform}: ${link.url}`)
+      .join('\n');
+
+    toastService.success(`Approved ${selectedSocialMediaLinks.size} social media link(s)!`);
+    toastService.info(`Selected links:\n${selectedLinks}`);
+
+    setShowSocialMediaSuggestions(false);
+    setSocialMediaSuggestions([]);
+    setSelectedSocialMediaLinks(new Set());
+  };
+
+  const handleRejectSocialMedia = () => {
+    setShowSocialMediaSuggestions(false);
+    setSocialMediaSuggestions([]);
+    setSelectedSocialMediaLinks(new Set());
+    toastService.info('Social media suggestions rejected');
+  };
+
   return (
     <AdminLayout>
       <div className={styles.businessesPage}>
@@ -553,6 +678,17 @@ export default function BusinessesPage() {
               <option value="">All Featured</option>
               <option value="true">Featured</option>
               <option value="false">Not Featured</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <select
+              value={hasLogoFilter}
+              onChange={(e) => setHasLogoFilter(e.target.value)}
+            >
+              <option value="">Has Logo (All)</option>
+              <option value="true">Has Logo</option>
+              <option value="false">No Logo</option>
             </select>
           </div>
 
@@ -658,6 +794,56 @@ export default function BusinessesPage() {
           ]}
         />
 
+        {/* Global Logo Suggestion Preview */}
+        {showLogoSuggestion && logoSuggestion && generatingForBusinessId && (
+          <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            zIndex: 1000,
+            padding: '20px',
+            border: '2px solid #4caf50',
+            borderRadius: '8px',
+            backgroundColor: 'white',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            minWidth: '300px'
+          }}>
+            <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#2e7d32' }}>
+              Generated Logo Preview
+            </p>
+            <img
+              src={logoSuggestion}
+              alt="Generated logo"
+              style={{
+                width: '100px',
+                height: '100px',
+                objectFit: 'contain',
+                marginBottom: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                backgroundColor: 'white',
+                padding: '5px'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleAcceptLogo}
+                className="btn btn-success btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+              >
+                <FiCheck /> Accept
+              </button>
+              <button
+                onClick={handleRejectLogo}
+                className="btn btn-danger btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+              >
+                <FiX /> Reject
+              </button>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <LoadingSpinner text="Loading businesses..." />
         ) : (
@@ -678,6 +864,7 @@ export default function BusinessesPage() {
                       />
                     </th>
                     <th>ID</th>
+                    <th>Logo</th>
                     <th>Name</th>
                     <th>Category ID</th>
                     <th>Status</th>
@@ -699,6 +886,32 @@ export default function BusinessesPage() {
                         />
                       </td>
                       <td>{business.id}</td>
+                      <td>
+                        {business.logo ? (
+                          <img
+                            src={business.logo}
+                            alt={business.name}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              objectFit: 'contain',
+                              border: '1px solid #ddd',
+                              borderRadius: '4px',
+                              padding: '2px'
+                            }}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => handleGenerateLogo(business.name, business.id)}
+                            disabled={isGeneratingLogo && generatingForBusinessId === business.id}
+                            className="btn btn-secondary btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', padding: '4px 8px' }}
+                          >
+                            <FiImage size={12} />
+                            {isGeneratingLogo && generatingForBusinessId === business.id ? 'Gen...' : 'Generate'}
+                          </button>
+                        )}
+                      </td>
                       <td>
                         <strong>{business.name}</strong>
                         {business.name_ar && (
@@ -855,6 +1068,144 @@ export default function BusinessesPage() {
                     onChange={(value) => setFormData({ ...formData, logo: value })}
                     label="Business Logo"
                   />
+
+                  {/* Logo Generation */}
+                  <div style={{ marginTop: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateLogo(formData.name)}
+                      disabled={isGeneratingLogo || !formData.name}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <FiImage />
+                      {isGeneratingLogo ? 'Generating Logo...' : 'Generate Logo'}
+                    </button>
+                    {!formData.name && (
+                      <small style={{ color: '#999', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                        Enter business name first to generate logo
+                      </small>
+                    )}
+                  </div>
+
+                  {/* Logo Suggestion Preview */}
+                  {showLogoSuggestion && logoSuggestion && (
+                    <div style={{
+                      marginTop: '15px',
+                      padding: '15px',
+                      border: '2px solid #4caf50',
+                      borderRadius: '8px',
+                      backgroundColor: '#f0f9f4'
+                    }}>
+                      <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#2e7d32' }}>
+                        Generated Logo Preview
+                      </p>
+                      <img
+                        src={logoSuggestion}
+                        alt="Generated logo"
+                        style={{
+                          width: '100px',
+                          height: '100px',
+                          objectFit: 'contain',
+                          marginBottom: '10px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          backgroundColor: 'white',
+                          padding: '5px'
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={handleAcceptLogo}
+                          className="btn btn-success btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <FiCheck /> Accept
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRejectLogo}
+                          className="btn btn-danger btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <FiX /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Social Media Fetch - Separate Form Group */}
+                <div className="form-group">
+                  <label>Social Media Discovery</label>
+                  <button
+                    type="button"
+                    onClick={() => handleFetchSocialMedia(formData.name)}
+                    disabled={isFetchingSocialMedia || !formData.name}
+                    className="btn btn-info btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <FiShare2 />
+                    {isFetchingSocialMedia ? 'Fetching Social Media...' : 'Fetch Social Media Links'}
+                  </button>
+                  {!formData.name && (
+                    <small style={{ color: '#999', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                      Enter business name first to fetch social media
+                    </small>
+                  )}
+
+                  {/* Social Media Suggestions Preview */}
+                  {showSocialMediaSuggestions && socialMediaSuggestions.length > 0 && (
+                    <div className={styles.socialMediaSuggestions}>
+                      <p className={styles.suggestionsHeader}>
+                        Found Social Media Links ({socialMediaSuggestions.length})
+                      </p>
+                      <div className={styles.suggestionsList}>
+                        {socialMediaSuggestions.map((link, index) => (
+                          <label
+                            key={index}
+                            className={`${styles.suggestionItem} ${
+                              selectedSocialMediaLinks.has(index) ? styles.selected : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSocialMediaLinks.has(index)}
+                              onChange={() => handleToggleSocialMediaLink(index)}
+                            />
+                            <div className={styles.suggestionContent}>
+                              <div className={styles.suggestionPlatform}>
+                                {link.platform}
+                              </div>
+                              <div className={styles.suggestionUrl}>
+                                {link.url}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <div className={styles.suggestionsActions}>
+                        <button
+                          type="button"
+                          onClick={handleApproveSelectedSocialMedia}
+                          className="btn btn-success btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                          disabled={selectedSocialMediaLinks.size === 0}
+                        >
+                          <FiCheck /> Approve Selected ({selectedSocialMediaLinks.size})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRejectSocialMedia}
+                          className="btn btn-danger btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <FiX /> Reject All
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">

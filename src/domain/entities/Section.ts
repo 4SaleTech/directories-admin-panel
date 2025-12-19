@@ -6,6 +6,7 @@ export interface Section {
   cta_title?: string;
   cta_title_ar?: string;
   background_color?: string;
+  background_color_dark?: string;
   business_limit: number;
   is_active: boolean;
   display_order: number;
@@ -22,6 +23,7 @@ export interface SectionCreateRequest {
   cta_title?: string;
   cta_title_ar?: string;
   background_color?: string;
+  background_color_dark?: string;
   business_limit: number;
   display_order?: number;
   category_id?: number;
@@ -35,6 +37,7 @@ export interface SectionUpdateRequest {
   cta_title?: string;
   cta_title_ar?: string;
   background_color?: string;
+  background_color_dark?: string;
   business_limit?: number;
   display_order?: number;
   category_id?: number;

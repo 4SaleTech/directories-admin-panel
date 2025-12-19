@@ -111,6 +111,7 @@ export interface BusinessListParams {
   status?: string;
   is_verified?: boolean;
   is_featured?: boolean;
+  has_logo?: boolean;
   category_id?: number;
   search?: string;
   sort?: string;

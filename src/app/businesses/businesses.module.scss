@@ -248,3 +248,84 @@
   color: #666;
   font-weight: 500;
 }
+
+// Social Media Suggestions styles
+.socialMediaSuggestions {
+  margin-top: 15px;
+  padding: 15px;
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  background-color: #e3f2fd;
+}
+
+.suggestionsHeader {
+  margin: 0 0 10px 0;
+  font-weight: bold;
+  color: #1565c0;
+  font-size: 14px;
+}
+
+.suggestionsList {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.selected {
+    border: 2px solid #2196f3;
+    background-color: #f0f7ff;
+  }
+
+  &:hover {
+    background-color: #f5f9ff;
+    border-color: #2196f3;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0;
+  }
+}
+
+.suggestionContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestionPlatform {
+  color: #1565c0;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.suggestionUrl {
+  color: #666;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.suggestionsActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}

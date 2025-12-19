@@ -6,6 +6,8 @@ import { businessAdminRepository } from '@/infrastructure/repositories/BusinessA
 import { categoryAdminRepository } from '@/infrastructure/repositories/CategoryAdminRepository';
 import { sectionAdminRepository } from '@/infrastructure/repositories/SectionAdminRepository';
 import { tagAdminRepository } from '@/infrastructure/repositories/TagAdminRepository';
+import { searchKeywordAdminRepository } from '@/infrastructure/repositories/SearchKeywordAdminRepository';
+import { TrendingKeyword } from '@/domain/entities/SearchKeyword';
 import styles from './dashboard.module.scss';
 
 interface Stats {
@@ -21,10 +23,19 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [trendingKeywords, setTrendingKeywords] = useState<TrendingKeyword[]>([]);
+  const [trendingPeriod, setTrendingPeriod] = useState<'24h' | '7d' | '30d'>('24h');
+  const [isTrendingLoading, setIsTrendingLoading] = useState(false);
 
   useEffect(() => {
     loadStats();
+    loadTrendingKeywords();
   }, []);
+
+  useEffect(() => {
+    loadTrendingKeywords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trendingPeriod]);
 
   const loadStats = async () => {
     try {
@@ -61,6 +72,18 @@ export default function DashboardPage() {
       setError('Failed to load dashboard statistics');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadTrendingKeywords = async () => {
+    try {
+      setIsTrendingLoading(true);
+      const response = await searchKeywordAdminRepository.getTrendingSearches(trendingPeriod, 10);
+      setTrendingKeywords(response.keywords || []);
+    } catch (err: any) {
+      console.error('Failed to load trending keywords:', err);
+    } finally {
+      setIsTrendingLoading(false);
     }
   };
 
@@ -125,6 +148,62 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
+        <div className={styles.trendingSection}>
+          <div className={styles.trendingHeader}>
+            <h2>🔥 Trending Search Keywords</h2>
+            <div className={styles.periodSelector}>
+              <button
+                className={trendingPeriod === '24h' ? styles.active : ''}
+                onClick={() => setTrendingPeriod('24h')}
+              >
+                24 Hours
+              </button>
+              <button
+                className={trendingPeriod === '7d' ? styles.active : ''}
+                onClick={() => setTrendingPeriod('7d')}
+              >
+                7 Days
+              </button>
+              <button
+                className={trendingPeriod === '30d' ? styles.active : ''}
+                onClick={() => setTrendingPeriod('30d')}
+              >
+                30 Days
+              </button>
+            </div>
+          </div>
+
+          {isTrendingLoading ? (
+            <div className="loading">Loading trending keywords...</div>
+          ) : trendingKeywords.length > 0 ? (
+            <div className={styles.trendingList}>
+              {trendingKeywords.map((keyword, index) => (
+                <div key={keyword.keyword_id} className={styles.trendingItem}>
+                  <div className={styles.rank}>#{index + 1}</div>
+                  <div className={styles.keywordInfo}>
+                    <div className={styles.keywordText}>
+                      {keyword.keyword}
+                      {keyword.keyword_ar && (
+                        <span className={styles.keywordAr}> ({keyword.keyword_ar})</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.searchCount}>
+                    <span className="badge badge-info">{keyword.search_count} searches</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.noData}>
+              <p>No trending keywords for this period</p>
+              <a href="/keywords" className="btn btn-primary btn-sm">
+                Manage Keywords
+              </a>
+            </div>
+          )}
+        </div>
+
         <div className={styles.quickActions}>
           <h2>Quick Actions</h2>
           <div className={styles.actionsGrid}>
@@ -135,6 +214,10 @@ export default function DashboardPage() {
             <a href="/categories" className={`${styles.actionCard} card`}>
               <h3>Manage Categories</h3>
               <p>Organize and update business categories</p>
+            </a>
+            <a href="/keywords" className={`${styles.actionCard} card`}>
+              <h3>Manage Keywords</h3>
+              <p>Manage search keywords and trending searches</p>
             </a>
             <a href="/sections" className={`${styles.actionCard} card`}>
               <h3>Manage Sections</h3>

@@ -40,6 +40,7 @@ export default function SectionsPage() {
     cta_title: '',
     cta_title_ar: '',
     background_color: '',
+    background_color_dark: '',
     business_limit: 10,
     display_order: 0,
     category_id: undefined as number | undefined,
@@ -184,6 +185,7 @@ export default function SectionsPage() {
       cta_title: '',
       cta_title_ar: '',
       background_color: '',
+      background_color_dark: '',
       business_limit: 10,
       display_order: 0,
       category_id: undefined,
@@ -202,6 +204,7 @@ export default function SectionsPage() {
       cta_title: section.cta_title || '',
       cta_title_ar: section.cta_title_ar || '',
       background_color: section.background_color || '',
+      background_color_dark: section.background_color_dark || '',
       business_limit: section.business_limit,
       display_order: section.display_order,
       category_id: section.category_id,
@@ -247,6 +250,7 @@ export default function SectionsPage() {
         cta_title: formData.cta_title || undefined,
         cta_title_ar: formData.cta_title_ar || undefined,
         background_color: formData.background_color || undefined,
+        background_color_dark: formData.background_color_dark || undefined,
         business_limit: formData.business_limit,
         display_order: formData.display_order,
         category_id: formData.category_id || undefined,
@@ -547,7 +551,7 @@ export default function SectionsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Background Color (optional)</label>
+                  <label>Background Color - Light Mode (optional)</label>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <input
                       type="color"
@@ -564,7 +568,29 @@ export default function SectionsPage() {
                     />
                   </div>
                   <small style={{ color: '#666', fontSize: '12px' }}>
-                    Section background color (hex code)
+                    Section background color for light mode (hex code)
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label>Background Color - Dark Mode (optional)</label>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={formData.background_color_dark || '#000000'}
+                      onChange={(e) => setFormData({ ...formData, background_color_dark: e.target.value })}
+                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px' }}
+                    />
+                    <input
+                      type="text"
+                      value={formData.background_color_dark}
+                      onChange={(e) => setFormData({ ...formData, background_color_dark: e.target.value })}
+                      placeholder="#000000"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Section background color for dark mode (hex code) - Falls back to light mode color if empty
                   </small>
                 </div>
 
