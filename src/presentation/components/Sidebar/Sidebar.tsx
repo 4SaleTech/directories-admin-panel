@@ -19,8 +19,14 @@ export default function Sidebar() {
     { href: '/sections', label: 'Sections', icon: '📑' },
     { href: '/tags', label: 'Tags', icon: '🏷️' },
     { href: '/badges', label: 'Badges', icon: '🏆' },
-    { href: '/filters', label: 'Filters', icon: '🔍' },
+    { href: '/filters', label: 'Filters', icon: '🔎' },
+    { href: '/opensearch', label: 'OpenSearch', icon: '⚡', requireRole: 'super_admin' as const },
   ];
+
+  // Filter menu items based on role
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.requireRole || admin?.role === item.requireRole
+  );
 
   return (
     <div className={styles.sidebar}>
@@ -36,7 +42,7 @@ export default function Sidebar() {
 
       <nav className={styles.sidebarNav}>
         <ul>
-          {menuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
