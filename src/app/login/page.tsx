@@ -17,7 +17,8 @@ export default function LoginPage() {
   const isConsoleAuthInProgress =
     typeof window !== "undefined" &&
     (window.location.search.includes("admin_token=") ||
-      sessionStorage.getItem("console_auth") === "true");
+      sessionStorage.getItem("console_auth") === "true" ||
+      window.parent !== window); // Embedded in iframe (postMessage flow)
 
   useEffect(() => {
     if (isAuthenticated) {

@@ -5,6 +5,12 @@
  * Supports receiving tokens via URL parameters and postMessage API.
  */
 
+// Debug logging flag - only enable in development
+const DEBUG_AUTH =
+  typeof process !== "undefined" &&
+  process.env.NODE_ENV === "development" &&
+  process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
+
 export interface ConsoleTokenPayload {
   admin_id: string;
   username: string;
@@ -37,9 +43,19 @@ export class AdminConsoleAuthService {
 
   constructor() {
     // Get console URL from environment variable
-    this.consoleOrigin =
+    const consoleUrl =
       process.env.NEXT_PUBLIC_ADMIN_CONSOLE_URL ||
       "https://admin-console.q84sale.com";
+
+    // Normalize to origin only (scheme + host + port) for postMessage validation
+    // This prevents issues with trailing slashes or paths in the env var
+    try {
+      this.consoleOrigin = new URL(consoleUrl).origin;
+    } catch (error) {
+      console.error("[AdminConsoleAuth] Invalid Console URL:", consoleUrl);
+      this.consoleOrigin = "https://admin-console.q84sale.com";
+    }
+
     this.verifyEndpoint = "/admin/console-auth/verify-token";
   }
 
@@ -53,8 +69,15 @@ export class AdminConsoleAuthService {
     const token = params.get("admin_token");
 
     if (token) {
-      // Clean the URL to remove the token
-      window.history.replaceState({}, "", window.location.pathname);
+      // Clean the URL to remove only the admin_token, preserving other params and hash
+      const cleanedParams = new URLSearchParams(window.location.search);
+      cleanedParams.delete("admin_token");
+      const search = cleanedParams.toString();
+      const newUrl =
+        window.location.pathname +
+        (search ? `?${search}` : "") +
+        window.location.hash;
+      window.history.replaceState({}, "", newUrl);
     }
 
     return token;
@@ -69,22 +92,28 @@ export class AdminConsoleAuthService {
     window.addEventListener("message", (event) => {
       // Validate origin
       if (event.origin !== this.consoleOrigin) {
-        console.warn(
-          "[AdminConsoleAuth] Received message from untrusted origin:",
-          event.origin,
-        );
+        if (DEBUG_AUTH) {
+          console.warn(
+            "[AdminConsoleAuth] Received message from untrusted origin:",
+            event.origin,
+          );
+        }
         return;
       }
 
       // Handle AUTH_TOKEN message
       if (event.data?.type === "AUTH_TOKEN" && event.data.token) {
-        console.log("[AdminConsoleAuth] Received token via postMessage");
+        if (DEBUG_AUTH) {
+          console.log("[AdminConsoleAuth] Received token via postMessage");
+        }
         onTokenReceived(event.data.token);
       }
     });
 
     this.messageListenerAttached = true;
-    console.log("[AdminConsoleAuth] PostMessage listener attached");
+    if (DEBUG_AUTH) {
+      console.log("[AdminConsoleAuth] PostMessage listener attached");
+    }
   }
 
   /**
@@ -99,7 +128,9 @@ export class AdminConsoleAuthService {
         { type: "ADMIN_APP_READY" },
         this.consoleOrigin,
       );
-      console.log("[AdminConsoleAuth] Sent ADMIN_APP_READY signal");
+      if (DEBUG_AUTH) {
+        console.log("[AdminConsoleAuth] Sent ADMIN_APP_READY signal");
+      }
     }
   }
 
@@ -111,7 +142,9 @@ export class AdminConsoleAuthService {
 
     if (window.parent !== window) {
       window.parent.postMessage({ type: "REQUEST_TOKEN" }, this.consoleOrigin);
-      console.log("[AdminConsoleAuth] Requested fresh token");
+      if (DEBUG_AUTH) {
+        console.log("[AdminConsoleAuth] Requested fresh token");
+      }
     }
   }
 
@@ -131,10 +164,69 @@ export class AdminConsoleAuthService {
         body: JSON.stringify({ token }),
       });
 
-      const data = await response.json();
-      return data;
+      const text = await response.text();
+
+      if (!response.ok) {
+        if (DEBUG_AUTH) {
+          console.error(
+            "[AdminConsoleAuth] Token verification failed with status:",
+            response.status,
+            "body:",
+            text,
+          );
+        }
+        let errorMessage = `Backend token verification failed with status ${response.status}`;
+        if (text) {
+          try {
+            const errorJson = JSON.parse(text);
+            if (typeof errorJson.error === "string") {
+              errorMessage = errorJson.error;
+            } else if (typeof errorJson.message === "string") {
+              errorMessage = errorJson.message;
+            }
+          } catch {
+            // Non-JSON error body; keep the default errorMessage
+          }
+        }
+        return {
+          valid: false,
+          error: errorMessage,
+        };
+      }
+
+      if (!text) {
+        if (DEBUG_AUTH) {
+          console.error(
+            "[AdminConsoleAuth] Empty response from backend during token verification",
+          );
+        }
+        return {
+          valid: false,
+          error: "Empty response from backend during token verification",
+        };
+      }
+
+      try {
+        const data = JSON.parse(text);
+        return data;
+      } catch (parseError) {
+        if (DEBUG_AUTH) {
+          console.error(
+            "[AdminConsoleAuth] Failed to parse token verification response:",
+            parseError,
+            "body:",
+            text,
+          );
+        }
+        return {
+          valid: false,
+          error: "Invalid JSON response from backend during token verification",
+        };
+      }
     } catch (error) {
-      console.error("[AdminConsoleAuth] Token verification failed:", error);
+      if (DEBUG_AUTH) {
+        console.error("[AdminConsoleAuth] Token verification failed:", error);
+      }
       return {
         valid: false,
         error: "Failed to verify token with backend",
@@ -155,10 +247,12 @@ export class AdminConsoleAuthService {
       });
 
       if (!response.ok) {
-        console.error(
-          "[AdminConsoleAuth] Failed to fetch profile:",
-          response.status,
-        );
+        if (DEBUG_AUTH) {
+          console.error(
+            "[AdminConsoleAuth] Failed to fetch profile:",
+            response.status,
+          );
+        }
         return null;
       }
 
@@ -244,23 +338,31 @@ export class AdminConsoleAuthService {
     onAuthenticated: (payload: ConsoleTokenPayload, token: string) => void,
     onError: (error: string) => void,
   ): Promise<void> {
-    console.log("[AdminConsoleAuth] Initializing...");
+    if (DEBUG_AUTH) {
+      console.log("[AdminConsoleAuth] Initializing...");
+    }
 
     // Try URL parameter first
     const urlToken = this.extractTokenFromURL();
     if (urlToken) {
-      console.log("[AdminConsoleAuth] Token found in URL");
+      if (DEBUG_AUTH) {
+        console.log("[AdminConsoleAuth] Token found in URL");
+      }
       const result = await this.verifyToken(urlToken, apiBaseUrl);
 
       if (result.valid && result.payload) {
-        console.log("[AdminConsoleAuth] Token verified successfully");
+        if (DEBUG_AUTH) {
+          console.log("[AdminConsoleAuth] Token verified successfully");
+        }
         onAuthenticated(result.payload, urlToken);
         return;
       } else {
-        console.error(
-          "[AdminConsoleAuth] Token verification failed:",
-          result.error,
-        );
+        if (DEBUG_AUTH) {
+          console.error(
+            "[AdminConsoleAuth] Token verification failed:",
+            result.error,
+          );
+        }
         onError(result.error || "Invalid token");
         return;
       }
@@ -271,13 +373,17 @@ export class AdminConsoleAuthService {
       const result = await this.verifyToken(token, apiBaseUrl);
 
       if (result.valid && result.payload) {
-        console.log("[AdminConsoleAuth] PostMessage token verified");
+        if (DEBUG_AUTH) {
+          console.log("[AdminConsoleAuth] PostMessage token verified");
+        }
         onAuthenticated(result.payload, token);
       } else {
-        console.error(
-          "[AdminConsoleAuth] PostMessage token verification failed:",
-          result.error,
-        );
+        if (DEBUG_AUTH) {
+          console.error(
+            "[AdminConsoleAuth] PostMessage token verification failed:",
+            result.error,
+          );
+        }
         onError(result.error || "Invalid token");
       }
     });
@@ -285,9 +391,11 @@ export class AdminConsoleAuthService {
     // Signal readiness if in iframe
     this.signalReady();
 
-    console.log(
-      "[AdminConsoleAuth] Initialization complete, waiting for token...",
-    );
+    if (DEBUG_AUTH) {
+      console.log(
+        "[AdminConsoleAuth] Initialization complete, waiting for token...",
+      );
+    }
   }
 
   /**

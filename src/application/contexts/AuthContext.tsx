@@ -7,6 +7,11 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+
+// Debug logging flag - only enable in development
+const DEBUG_AUTH =
+  process.env.NODE_ENV === "development" &&
+  process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 import { Admin, AdminAuthContext } from "@/domain/entities/Admin";
 import { authRepository } from "@/infrastructure/repositories/AuthRepository";
 import { adminApiClient } from "@/infrastructure/api/adminApiClient";
@@ -36,10 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isConsoleAuthStored) {
         // Restore console auth from session immediately
         const storedPayload = sessionStorage.getItem("console_payload");
-        if (storedPayload && storedToken && storedAdmin) {
+        const storedAdminSession = sessionStorage.getItem("admin_user");
+        if (storedPayload && storedToken && storedAdminSession) {
           try {
             setToken(storedToken);
-            setAdmin(JSON.parse(storedAdmin));
+            setAdmin(JSON.parse(storedAdminSession));
             setIsConsoleAuth(true);
             setConsolePayload(JSON.parse(storedPayload));
             setIsLoading(false);
@@ -48,6 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error("Failed to restore console auth:", error);
             sessionStorage.removeItem("console_auth");
             sessionStorage.removeItem("console_payload");
+            sessionStorage.removeItem("admin_user");
+            adminApiClient.clearToken();
           }
         }
       }
@@ -57,21 +65,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         adminApiClient.getClient().defaults.baseURL ||
         "http://localhost:8080/api/v2";
 
-      // Check if there's a token in URL to attempt Console auth
+      // Determine whether we should initialize Console auth.
+      // We do this either when an admin token is present in the URL or
+      // when the app is embedded in an iframe (postMessage-only flow).
+      const isBrowser = typeof window !== "undefined";
       const hasTokenInURL =
-        typeof window !== "undefined" &&
-        window.location.search.includes("admin_token=");
+        isBrowser && window.location.search.includes("admin_token=");
+      const isEmbeddedInIframe = isBrowser && window.parent !== window;
 
-      if (hasTokenInURL) {
+      if (hasTokenInURL || isEmbeddedInIframe) {
         try {
           await adminConsoleAuthService.initialize(
             apiBaseUrl,
             // On successful console authentication
             async (payload: ConsoleTokenPayload, consoleToken: string) => {
-              console.log(
-                "[AuthProvider] Admin Console authentication successful",
-                payload,
-              );
+              if (DEBUG_AUTH) {
+                console.log(
+                  "[AuthProvider] Admin Console authentication successful",
+                );
+              }
 
               // Optionally fetch full profile from /me endpoint for additional info
               let fullProfile = payload;
@@ -80,14 +92,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   await adminConsoleAuthService.getAdminProfile(consoleToken);
                 if (profile) {
                   fullProfile = profile;
-                  console.log(
-                    "[AuthProvider] Fetched full admin profile from Console",
-                  );
+                  if (DEBUG_AUTH) {
+                    console.log(
+                      "[AuthProvider] Fetched full admin profile from Console",
+                    );
+                  }
                 }
               } catch (error) {
-                console.log(
-                  "[AuthProvider] Could not fetch full profile, using token payload",
-                );
+                if (DEBUG_AUTH) {
+                  console.log(
+                    "[AuthProvider] Could not fetch full profile, using token payload",
+                  );
+                }
               }
 
               // Create admin object from console payload
@@ -113,29 +129,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setToken(consoleToken);
               setIsConsoleAuth(true);
               setConsolePayload(fullProfile);
-              adminApiClient.setToken(consoleToken);
+              adminApiClient.setToken(consoleToken, true); // sessionOnly = true for Console auth
 
-              // Store console auth flag
+              // Store console auth flag and data in sessionStorage only (tab-scoped)
               sessionStorage.setItem("console_auth", "true");
               sessionStorage.setItem(
                 "console_payload",
                 JSON.stringify(fullProfile),
               );
-              localStorage.setItem("admin_user", JSON.stringify(consoleAdmin));
+              sessionStorage.setItem(
+                "admin_user",
+                JSON.stringify(consoleAdmin),
+              );
 
               setIsLoading(false);
             },
             // On console auth error
             (error: string) => {
-              console.log("[AuthProvider] Admin Console auth failed:", error);
+              if (DEBUG_AUTH) {
+                console.log("[AuthProvider] Admin Console auth failed:", error);
+              }
               // Fall back to regular authentication
               checkRegularAuth();
             },
           );
         } catch (error) {
-          console.log(
-            "[AuthProvider] Console auth initialization failed, using regular auth",
-          );
+          if (DEBUG_AUTH) {
+            console.log(
+              "[AuthProvider] Console auth initialization failed, using regular auth",
+            );
+          }
           checkRegularAuth();
         }
       } else {
@@ -175,10 +198,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(authToken);
         setIsConsoleAuth(false);
         setConsolePayload(null);
-        adminApiClient.setToken(authToken);
+        adminApiClient.setToken(authToken, false); // sessionOnly = false for regular auth
         localStorage.setItem("admin_user", JSON.stringify(adminData));
+        // Clear any Console auth session data
         sessionStorage.removeItem("console_auth");
         sessionStorage.removeItem("console_payload");
+        sessionStorage.removeItem("admin_user");
       } else {
         throw new Error(response.message || "Login failed");
       }
@@ -194,8 +219,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsConsoleAuth(false);
     setConsolePayload(null);
     authRepository.logout();
+    // Clear all auth data from both storage types
     sessionStorage.removeItem("console_auth");
     sessionStorage.removeItem("console_payload");
+    sessionStorage.removeItem("admin_user");
+    localStorage.removeItem("admin_user");
   };
 
   const hasPermission = (permission: string): boolean => {

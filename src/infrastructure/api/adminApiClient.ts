@@ -38,6 +38,7 @@ export class AdminApiClient {
   private client: AxiosInstance;
   private token: string | null = null;
   private clientInitialized: boolean = false;
+  private isSessionOnly: boolean = false; // Flag for Console auth tokens
 
   constructor() {
     // Get API URL - will re-evaluate on client side
@@ -94,16 +95,36 @@ export class AdminApiClient {
       },
     );
 
-    // Load token from localStorage on initialization
+    // Load token from sessionStorage (Console) or localStorage (regular) on initialization
     if (typeof window !== "undefined") {
-      this.token = localStorage.getItem("admin_token");
+      const sessionToken = sessionStorage.getItem("admin_token");
+      const localToken = localStorage.getItem("admin_token");
+
+      if (sessionToken) {
+        // Console auth token
+        this.token = sessionToken;
+        this.isSessionOnly = true;
+      } else if (localToken) {
+        // Regular auth token
+        this.token = localToken;
+        this.isSessionOnly = false;
+      }
     }
   }
 
-  setToken(token: string) {
+  setToken(token: string, sessionOnly: boolean = false) {
     this.token = token;
+    this.isSessionOnly = sessionOnly;
     if (typeof window !== "undefined") {
-      localStorage.setItem("admin_token", token);
+      if (sessionOnly) {
+        // Console auth: store in sessionStorage only
+        sessionStorage.setItem("admin_token", token);
+        localStorage.removeItem("admin_token"); // Remove any existing persistent token
+      } else {
+        // Regular auth: store in localStorage
+        localStorage.setItem("admin_token", token);
+        sessionStorage.removeItem("admin_token");
+      }
     }
   }
 
@@ -113,9 +134,12 @@ export class AdminApiClient {
 
   clearToken() {
     this.token = null;
+    this.isSessionOnly = false;
     if (typeof window !== "undefined") {
       localStorage.removeItem("admin_token");
       localStorage.removeItem("admin_user");
+      sessionStorage.removeItem("admin_token");
+      sessionStorage.removeItem("admin_user");
     }
   }
 

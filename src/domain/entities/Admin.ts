@@ -1,3 +1,5 @@
+import { ConsoleTokenPayload } from "@/infrastructure/services/AdminConsoleAuthService";
+
 export interface Admin {
   id: number;
   username: string;
@@ -20,14 +22,6 @@ export interface AdminLoginResponse {
     token: string;
     expires_at: string;
   };
-}
-
-export interface ConsoleTokenPayload {
-  admin_id: string;
-  roles: string[];
-  permissions: string[];
-  issued_at: number;
-  exp: number;
 }
 
 export interface AdminAuthContext {
