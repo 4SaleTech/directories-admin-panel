@@ -13,8 +13,8 @@ A modern, full-featured admin panel for managing the Business Directories platfo
 - **Filter Management**: Setup and assign filters to categories
 - **Clean Architecture**: Separation of concerns with domain, application, infrastructure, and presentation layers
 - **Responsive Design**: Mobile-friendly interface
-- **TypeScript**: Full type safety across the application
-
+- **TypeScript**: Full type safety across the application.
+  
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
