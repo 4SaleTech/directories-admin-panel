@@ -1,34 +1,61 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/application/contexts/AuthContext';
-import styles from './login.module.scss';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/application/contexts/AuthContext";
+import styles from "./login.module.scss";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if Console auth is in progress
+  const isConsoleAuthInProgress =
+    typeof window !== "undefined" &&
+    (window.location.search.includes("admin_token=") ||
+      sessionStorage.getItem("console_auth") === "true" ||
+      window.parent !== window); // Embedded in iframe (postMessage flow)
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
 
+  // Don't render login form if Console auth is in progress
+  if (isConsoleAuthInProgress) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <p>Authenticating...</p>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
       await login(username, password);
-      router.push('/dashboard');
+      router.push("/dashboard");
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Login failed. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -75,9 +102,9 @@ export default function LoginPage() {
             type="submit"
             className="btn btn-primary btn-lg"
             disabled={isLoading}
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
           >
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>
